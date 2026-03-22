@@ -70,7 +70,7 @@ echo Loading...
 
 
 
-														set ver=v3.9.8
+														set ver=v3.9.8.9
 		title winclean loading %ver%
 		set color=B
 		color B1
@@ -880,7 +880,6 @@ exit /b
 :todo
 :: ================== TODO !!! ================== ::
 echo " :dirlock "
-echo " chkdsk C: (disk health check in 3 states) "
 
 pause
 goto MENU
