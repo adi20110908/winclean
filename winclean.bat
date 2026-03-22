@@ -70,7 +70,7 @@ echo Loading...
 
 
 
-														set ver=v3.7.8
+														set ver=v3.9.8
 		title winclean loading %ver%
 		set color=B
 		color B1
@@ -181,7 +181,7 @@ echo Choose an option from the list:
 echo.
 echo Option 1:  Driver update / check
 echo Option 2:  Temp delete
-echo Option 3:  Tempomary files delete (explain: old windows update)
+echo Option 3:  Tempomary files delete [explain: old windows update]
 echo Option 4:  Corrupted files repair
 echo Option 5:  Winget update
 echo Option 6:  MODE: RUN ALL and autoexit
@@ -190,9 +190,11 @@ echo Option 8:  -- not working -- Folder locker -- beta
 echo Option 9:  MODE: Repair, Delete 
 echo Option 10: Usernamechanger
 echo Option 11: Ram checker
+echo Option 12: Disk health checker [in 3 states]
 echo.
 echo Option 0:  exit
 echo Option 01: Restarts winclean %ver%
+echo Option 02: Show all time log
 
 
 echo.
@@ -256,10 +258,20 @@ echo heading to ramscan
 cls
 goto ramscan
 
+) else if "%option%"=="12" (
+echo heading to diskscan
+cls
+goto diskscan
+
 ) else if "%option%"=="01" (
 echo heading to restart
 cls
 goto restart
+
+) else if "%option%"=="02" (
+echo heading to watch log
+cls
+goto watchlog
 
 ) else if "%option%"=="todo" (
 echo heading totototototodooo
@@ -611,6 +623,31 @@ goto rate
 
 :: ======================================= RAMSCAN END ======================================= ::
 
+:: ======================================= DISKSCAN ======================================= ::
+
+:diskscan
+echo Check your disk's health.
+echo you can use "C:"
+echo.
+echo If you have D, or E disk
+echo you can use "D:" or "E:"
+echo.
+
+set /p disk=Disk:  
+timeout /t 2 >nul
+echo.
+echo checking disk %disk%
+chkdsk %disk% /F
+
+echo.
+echo success!
+pause
+goto rate
+
+
+:: ======================================= DISKSCAN END ======================================= ::
+
+
 :: ====================== FULLVER ============================= :: <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 :fullver
 call :LOG "FULLVER started..."
@@ -746,6 +783,24 @@ goto :EOF
 
 :: ============================================= LOGGER END ============================================= ::
 
+:: ========================================= LOG WATCHER ========================================= ::
+:watchlog
+call :LOG "watchlog opened"
+cls
+echo ===================== WATCH LOG =====================
+echo.
+if exist "%MAIN_LOG%" (
+    type "%MAIN_LOG%"
+) else (
+    echo LOG file not found: %MAIN_LOG%
+)
+echo.
+echo press any key to return to menu
+pause >nul
+goto MENU
+:: ====================================== LOG WATCHER END ====================================== ::
+
+
 :: ============================================ QUIT =========================================== ::
 
 :exit
@@ -825,8 +880,7 @@ exit /b
 :todo
 :: ================== TODO !!! ================== ::
 echo " :dirlock "
-echo " chkdsk C:  ---- to winclean (disk health check in 3 states) "
-echo " watch log "
+echo " chkdsk C: (disk health check in 3 states) "
 
 pause
 goto MENU
