@@ -2,6 +2,7 @@
 title winclean booting...
 cls
 :: ##release: 2026.03.23
+REM LINT:IGNORE W012, W030
 :: TUDJA AZ ÉKEZETEKET!!
 :: version slogen: folderlocker -- betaversion -- 1% //loggerupdate //recommenedapps
 
@@ -19,6 +20,7 @@ echo Loading...
 				    color C1
 				    echo failed loading winclean: ERROR: nopermission "(NEEDS ADMIN RIGHTS)"
 				    echo restarting with admin rights...
+				    REM LINT:IGNORE W041
 				    powershell -Command "Start-Process '%~f0' -Verb RunAs"
 				   exit /b
 				)
@@ -29,6 +31,7 @@ echo Loading...
 echo Loading...
 	echo [==      ]
 
+REM LINT:IGNORE W028
 set "WC_DIR=%APPDATA%\winclean"
 set "LOG_DIR=%WC_DIR%\logs"
 
@@ -43,7 +46,7 @@ if not exist "%LOG_DIR%" (
 
 :: ============================= FILES / NAMES ============================== :: 
 set "MAIN_LOG=%LOG_DIR%\winclean.log"
-set "LATEST_LOG=%~dp0latest.log"
+set "LATEST_LOG=%~dp0winclean-latest.log"
 
 if exist "%LATEST_LOG%" del "%LATEST_LOG%" >nul 2>&1
 
@@ -69,7 +72,7 @@ echo Loading...
 
 
 
-														set ver=v4.2.1
+														set ver=v4.3.1.1.1.1b
 		title winclean loading %ver%
 		set color=B
 		color B1
@@ -729,6 +732,7 @@ timeout /t 3 >nul
 echo successfully updated!
 timeout /t 1 >nul /nobreak
 
+REM LINT:IGNORE W013
 :driver
 cls
 echo driver update in progress...
@@ -803,6 +807,7 @@ pause
 pause
 pause
 pause
+goto rate
 
 :: =================== DIRLOCK END ========================= ::
 
@@ -944,6 +949,7 @@ echo /
 timeout /t 1 >nul /nobreak
 cls
 call :LOG "Winclean restarted"
+REM LINT:IGNORE E014, W033
 call "%~f0"
 exit /b
 
@@ -951,7 +957,8 @@ exit /b
 :todo
 :: ================== TODO !!! ================== ::
 echo " :dirlock "
-echo " download winget apps "
-
+echo " older versions > appdata"
+echo " old apps (deep scan) dump delete "
 pause
-goto MENU
+REM LINT:IGNORE W001
+goto menu
