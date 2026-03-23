@@ -1,10 +1,9 @@
 @echo off
 title winclean booting...
 cls
-:: ##release: 2026.03.22
+:: ##release: 2026.03.23
 :: TUDJA AZ ÉKEZETEKET!!
-:: version slogen: folderlocker -- betaversion -- 1% //bootupdate //loggerupdate //username //ramscan
-
+:: version slogen: folderlocker -- betaversion -- 1% //loggerupdate //recommenedapps
 
 
 
@@ -70,7 +69,7 @@ echo Loading...
 
 
 
-														set ver=v3.9.8.9
+														set ver=v4.2.1
 		title winclean loading %ver%
 		set color=B
 		color B1
@@ -195,6 +194,7 @@ echo.
 echo Option 0:  exit
 echo Option 01: Restarts winclean %ver%
 echo Option 02: Show all time log
+echo Option 03: Download recommened apps
 
 
 echo.
@@ -272,6 +272,11 @@ goto restart
 echo heading to watch log
 cls
 goto watchlog
+
+) else if "%option%"=="03" (
+echo heading to download
+cls
+goto downloadapps
 
 ) else if "%option%"=="todo" (
 echo heading totototototodooo
@@ -648,6 +653,72 @@ goto rate
 :: ======================================= DISKSCAN END ======================================= ::
 
 
+:: ========================================= DOWNLOADAPPS ========================================= ::
+:downloadapps
+call :LOG "downloader opened"
+color %color%
+cls
+echo =========================== DOWNLOADER ===========================
+echo.
+echo.
+echo Announcement! THESE APPS ARE NOT SPONSORED! ONLY "RECOMMENED"!
+echo.
+echo Avilable apps:
+echo 1.: JAVA
+echo 2.: Localsend
+echo.
+echo 0: go back to menu
+echo.
+
+set /p appdown=App: 
+if "%coloruser%"=="0" (
+  echo heading to menu
+  cls
+  goto menu
+
+) else if "%appdown%"=="1" (
+echo downloading JAVA...
+goto javainstall0001
+
+) else if "%appdown%"=="2" (
+echo downloading localsend...
+goto localsendinstall0001
+
+
+) else if "%appdown%"=="0" (
+echo Opening menu
+timeout /t 1 >nul
+goto MENU
+
+) else (
+    echo unknown option
+    color C4
+    timeout /t 1 >nul
+    echo press any key to choose another one
+    Color C1
+    pause >nul
+    goto downloadapps
+)
+
+:javainstall0001
+winget install --id=Oracle.JavaRuntimeEnvironment -e
+echo Download ended.
+echo Press any key to go back to menu...
+pause >nul
+goto MENU
+
+:localsendinstall0001
+winget install localsend
+echo Download ended.
+echo Press any key to go back to menu...
+pause >nul
+goto MENU
+
+
+
+:: ======================================= DOWNLOADAPPS END ======================================= ::
+
+
 :: ====================== FULLVER ============================= :: <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 :fullver
 call :LOG "FULLVER started..."
@@ -880,6 +951,7 @@ exit /b
 :todo
 :: ================== TODO !!! ================== ::
 echo " :dirlock "
+echo " download winget apps "
 
 pause
 goto MENU
