@@ -1,964 +1,579 @@
 @echo off
-title winclean booting...
-cls
+setlocal EnableExtensions
 :: ##release: 2026.03.23
 REM LINT:IGNORE W012, W030
 :: TUDJA AZ ÉKEZETEKET!!
 :: version slogen: folderlocker -- betaversion -- 1% //loggerupdate //recommenedapps
 
+set "ver=v4.4.0"
 
+:: ================================ BOOT ================================ ::
+title winclean booting...
+chcp 65001 >nul
+cd /d "%~dp0"
+mode con: cols=78 lines=40 >nul 2>&1
 
-	cls
-				color 3
-echo Loading...
-	echo [=       ]
-
-				:: admin rights
-				net session >nul 2>&1
-				if %errorlevel% neq 0 (
-				    cls
-				    color C1
-				    echo failed loading winclean: ERROR: nopermission "(NEEDS ADMIN RIGHTS)"
-				    echo restarting with admin rights...
-				    REM LINT:IGNORE W041
-				    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-				   exit /b
-				)
-
-				chcp 65001 >nul
-
-	cls
-echo Loading...
-	echo [==      ]
-
-REM LINT:IGNORE W028
-set "WC_DIR=%APPDATA%\winclean"
-set "LOG_DIR=%WC_DIR%\logs"
-
-if not exist "%WC_DIR%" (
-    mkdir "%WC_DIR%"
-)
-
-if not exist "%LOG_DIR%" (
-    mkdir "%LOG_DIR%"
-)
-
-
-:: ============================= FILES / NAMES ============================== :: 
-set "MAIN_LOG=%LOG_DIR%\winclean.log"
-set "LATEST_LOG=%~dp0winclean-latest.log"
-
-if exist "%LATEST_LOG%" del "%LATEST_LOG%" >nul 2>&1
-
-if not exist "%MAIN_LOG%" (
-    echo ============================= > "%MAIN_LOG%"
-    echo WINCLEAN LOG >> "%MAIN_LOG%"
-    echo Created: %DATE% %TIME% >> "%MAIN_LOG%"
-    echo ============================= >> "%MAIN_LOG%"
-)
-
-(
-echo =============================
-echo WINCLEAN LATEST SESSION LOG
-echo Started: %DATE% %TIME%
-echo =============================
-) > "%LATEST_LOG%"
-
-
-
-	cls
-echo Loading...
-	echo [===     ]
-
-
-
-														set ver=v4.3.1.1.1.1b
-		title winclean loading %ver%
-		set color=B
-		color B1
-
-	cls
-echo Loading...
-	echo [====    ]
-
-set WC_DIR=%APPDATA%\winclean
-set COLOR_FILE=%WC_DIR%\colormode.cfg
-
-if not exist "%WC_DIR%" (
-    mkdir "%WC_DIR%"
-)
-
-if exist "%COLOR_FILE%" (
-    set /p color=<"%COLOR_FILE%"
-    call :LOG "color loaded from AppData: %color%"
-) else (
-    set color=B
-    echo %color%>"%COLOR_FILE%"
-    call :LOG "COLOR created default: %color%"
-)
-
-
-	cls
-echo Loading...
-	echo [=====   ]
-
-set WC_DIR=%APPDATA%\winclean
-set COLORPROFILE_FILE=%WC_DIR%\colorprofile.cfg
-
-if not exist "%WC_DIR%" (
-    mkdir "%WC_DIR%"
-)
-
-if exist "%COLORPROFILE_FILE%" (
-    set /p colorprofile=<"%COLORPROFILE_FILE%"
-) else (
-    set colorprofile= Text color: Light Aqua
-)
-
-
-
-	cls
-echo Loading...
-	echo [======  ]
-
-				cd..
-				cd..
-				cd..
-				cd..
-				cd..
-				cd..
-				c:\
-				cd..
-				cd..
-				cd Windows
-				cd System32
-
-
-set WC_DIR=%APPDATA%\winclean
-set USER_FILE=%WC_DIR%\user.cfg
-
-if not exist "%WC_DIR%" (
-    mkdir "%WC_DIR%"
-)
-
-if exist "%USER_FILE%" (
-    set /p user=<"%USER_FILE%"
-    call :LOG "Username loaded from AppData: %user%"
-) else (
-    set user=User
-    echo %user%>"%USER_FILE%"
-    call :LOG "Username created default: %user%"
-)
-
-
-	cls
-echo Loading...
-	echo [======= ]
-
-
-				title winclean %ver%
-
-	cls
-echo Loading...
-	echo [========]
-cls
-call :LOG "boot ended"
-call :LOG "winclean %ver% running"
-call :LOG_DEVICE
-
-
-:: ============================== BOOOT END ============================ ::
-
-:MENU
-cls
-call :LOG "MENU opened"
-color %color%
-title winclean %ver%
-echo ============================= WELCOME %user% TO WINCLEAN! =============================
+:: admin rights
+fltmc >nul 2>&1
+if errorlevel 1 goto :need_admin
+goto :init
+:need_admin
+color C1
 echo.
-echo winclean ver: %ver%
+echo   winclean needs administrator rights.
+echo   requesting elevation...
 echo.
-echo.
-echo Choose an option from the list:
-echo.
-echo Option 1:  Driver update / check
-echo Option 2:  Temp delete
-echo Option 3:  Tempomary files delete [explain: old windows update]
-echo Option 4:  Corrupted files repair
-echo Option 5:  Winget update
-echo Option 6:  MODE: RUN ALL and autoexit
-echo Option 7:  Change MENU color
-echo Option 8:  -- not working -- Folder locker -- beta
-echo Option 9:  MODE: Repair, Delete 
-echo Option 10: Usernamechanger
-echo Option 11: Ram checker
-echo Option 12: Disk health checker [in 3 states]
-echo.
-echo Option 0:  exit
-echo Option 01: Restarts winclean %ver%
-echo Option 02: Show all time log
-echo Option 03: Download recommened apps
-
-
-echo.
-set /p option=Option: 
-if "%option%"=="0" (
-  echo heading to quit
-  cls
-  goto exit
-
-) else if "%option%"=="1" (
-echo heading to driver
-goto driver
-
-) else if "%option%"=="2" (
-echo heading to temp
-cls
-goto temp
-
-) else if "%option%"=="3" (
-echo heading to clean
-cls
-goto clean
-
-) else if "%option%"=="4" (
-echo heading to corrupt
-cls
-goto corrupt
-
-) else if "%option%"=="5" (
-echo heading to winget update
-cls
-goto update
-
-) else if "%option%"=="6" (
-echo heading to driver fullversion mode
-cls
-goto fullver
-
-) else if "%option%"=="7" (
-echo heading to chcolor
-cls
-goto colorch
-
-) else if "%option%"=="8" (
-echo heading to Folder locker
-cls
-goto dirlock
-
-) else if "%option%"=="9" (
-echo heading to Repair delete
-cls
-goto repair
-
-) else if "%option%"=="10" (
-echo heading to usernamechanger
-cls
-goto usernamech
-
-) else if "%option%"=="11" (
-echo heading to ramscan
-cls
-goto ramscan
-
-) else if "%option%"=="12" (
-echo heading to diskscan
-cls
-goto diskscan
-
-) else if "%option%"=="01" (
-echo heading to restart
-cls
-goto restart
-
-) else if "%option%"=="02" (
-echo heading to watch log
-cls
-goto watchlog
-
-) else if "%option%"=="03" (
-echo heading to download
-cls
-goto downloadapps
-
-) else if "%option%"=="todo" (
-echo heading totototototodooo
-cls
-goto todo
-
-) else (
-    echo unknown option
-    echo press any key to choose another one
-    timeout /t 5 >nul
-    goto menu
-)
-
-
-:: ====================================================== CHOOSER END ====================================================== ::
-
-:colorch
-call :LOG "colorch opened"
-cls
-color %color%
-echo =========================== COLOR CHANGER ===========================
-echo.
-echo Now you are using this colorprofile: %colorprofile%
-echo.
-echo Aviable colors:
-echo 1:  Text color: Blue
-echo 2:  Text color: Green
-echo 3:  Text color: Aqua
-echo 4:  Text color: Red
-echo 5:  Text color: Purple
-echo 6:  Text color: Yellow
-echo 7:  Text color: White
-echo 8:  Text color: Gray
-echo 9:  Text color: Light Blue
-echo 10: Text color: Light Green
-echo 11: Text color: Light Aqua
-echo 12: Text color: Light Red
-echo 13: Text color: Light Purple
-echo 14: Text color: Light Yellow
-echo 15: Text color: Bright White
-echo 16: comming soon...
-
-echo.
-echo 0: go back to menu
-echo.
-
-set /p coloruser=Color: 
-if "%coloruser%"=="0" (
-  echo heading to menu
-  cls
-  goto menu
-
-) else if "%coloruser%"=="1" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=01
-set colorprofile= Text color: Blue
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="2" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=02
-set colorprofile= Text color: Green
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="3" (
-    echo changeing color to %coloruser%
-    timeout /t 1 >nul
-    set color=03
-    set colorprofile= Text color: Aqua
-    call :SAVE_COLOR
-    goto colorch
-
-
-) else if "%coloruser%"=="4" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=04
-set colorprofile= Text color: Red
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="5" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=05
-set colorprofile= Text color: Purple
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="6" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=06
-set colorprofile= Text color: Yellow
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="7" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=07
-set colorprofile= Text color: White
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="8" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=08
-set colorprofile= Text color: Gray
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="9" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=09
-set colorprofile= Text color: Light Blue
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="10" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=A
-set colorprofile= Text color: Light Green
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="11" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=B
-set colorprofile= Text color: Light Aqua
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="12" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=C
-set colorprofile= Text color: Light Red
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="13" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=D
-set colorprofile= Text color: Light Purple
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="14" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=E
-set colorprofile= Text color: Light Yellow
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="15" (
-echo changeing color to %coloruser%
-timeout /t 1 >nul
-set color=F
-set colorprofile= Text color: Bright White
-    call :SAVE_COLOR
-goto colorch
-
-) else if "%coloruser%"=="16" (
-echo I SAID COMMING SOON
-pause
-goto colorch
-
-) else (
-    echo unknown option
-    color C4
-    timeout /t 1 >nul
-    echo press any key to choose another one
-    Color C1
-    pause >nul
-    goto colorch
-)
-
-
-:: ================================================ COLORCH END ============================================== ::
-
-:: ======================= USERCH =========================== ::
-:usernamech
-set /p username=Username:  
-set user=%username%
-echo %user%>"%USER_FILE%"
-call :LOG "username changed and saved: %user%"
-echo username set to %user%
-echo.
-echo press any key to return to menu
-pause >nul
-goto MENU
-
-:: ===================== USERCH END ========================= ::
-
-:: ============================== WINGET UPDATE ====================== ::
-goto MENU
-:update
-call :LOG "winget update in progress..."
-echo winget update in process...
-winget update --all
-
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%~f0' -Verb RunAs" >nul 2>&1
 timeout /t 3 >nul
-echo successfully updated!
-call :LOG "winget update finished!"
-timeout /t 1 >nul /nobreak
-goto rate
-
-:: ============================= UPDATER END ============================= ::
-
-:driver
-call :LOG "drivers update in progress..."
-cls
-echo driver update in progress...
-driverquery /v
-timeout /t 1 /nobreak >nul
-echo just a second...
-
-driverquery /si
-call :LOG "driver update finished!"
-goto rate
-:: ============================== DRIVER END =========================== ::
-
-:temp
-call :LOG "temp delete in progress..."
-
-cls
-echo Temps deleteing in progess. please wait...
-timeout /t 1 /nobreak >nul
-
-echo User temp deleteing...
-del /s /f /q "%TEMP%\*.*"
-for /d %%x in ("%TEMP%\*") do rd /s /q "%%x"
-echo SUCCESS
-
-echo System temp deleteing
-del /s /f /q "C:\Windows\Temp\*.*"
-for /d %%x in ("C:\Windows\Temp\*") do rd /s /q "%%x"
-echo SUCCESS
-
-
-echo Public users temp deleteing
-del /s /f /q "C:\Users\Public\temp*.*"
-for /d %%x in ("C:\Users\Public\temp*") do rd /s /q "%%x"
-echo SUCCESS
-
-timeout /t 1 >nul /nobreak
-call :LOG "temp delete finished"
-
-goto rate
-:: =========================== TEMPDEL END ======================= ::
-
-:clean
-call :LOG "tempomary files deleting in progress..."
-cls
-echo tempomary files deleting in progress...
-cleanmgr /sagerun:1
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-timeout /t 1 >nul /nobreak
-call :LOG "tempomary files delete finished!"
-goto rate
-:: ========================= CLEAN END ============================ ::
-
-:corrupt
-call :LOG "corrupted files repearing..."
-cls
-echo corrupted files repearing...
-Dism.exe /online /Cleanup-Image /StartComponentCleanup
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-
-cls
-echo corrupted files repearing... (sfc)
-sfc /scannow
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-call :LOG "corrupted files repeared!"
-goto rate
-:: ========================= CORRUPT END ============================ ::
-
-:: ======================================= REPAIR / DELETE ======================================= ::
-:repair
-call :LOG "Repair started..."
-cls
-echo Temps deleteing in progess. please wait...
-timeout /t 1 /nobreak >nul
-
-echo User temp deleteing...
-del /s /f /q "%TEMP%\*.*"
-for /d %%x in ("%TEMP%\*") do rd /s /q "%%x"
-echo SUCCESS
-
-echo System temp deleteing
-del /s /f /q "C:\Windows\Temp\*.*"
-for /d %%x in ("C:\Windows\Temp\*") do rd /s /q "%%x"
-echo SUCCESS
-
-
-echo Public users temp deleteing
-del /s /f /q "C:\Users\Public\temp*.*"
-for /d %%x in ("C:\Users\Public\temp*") do rd /s /q "%%x"
-echo SUCCESS
-
-timeout /t 1 >nul /nobreak
-
-cls
-echo tempomary files deleting in progress...
-cleanmgr /sagerun:1
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-timeout /t 1 >nul /nobreak
-
-cls
-echo corrupted files repearing...
-Dism.exe /online /Cleanup-Image /StartComponentCleanup
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-
-cls
-echo corrupted files repearing...
-sfc /scannow
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-call :LOG "Repair finished"
-goto rate
-:: ======================================= REPAIR / DELETE END ======================================= ::
-
-:: ======================================= RAMSCAN ======================================= ::
-:ramscan
-echo opening the ram checker user menu
-C:\Windows\Sysnative\mdsched.exe
-echo menu opened. You will needed to select an option from the opened list.
-timeout /t 5
-echo the tab is now closeing..
-timeout /t 2
-goto rate
-
-
-:: ======================================= RAMSCAN END ======================================= ::
-
-:: ======================================= DISKSCAN ======================================= ::
-
-:diskscan
-echo Check your disk's health.
-echo you can use "C:"
-echo.
-echo If you have D, or E disk
-echo you can use "D:" or "E:"
-echo.
-
-set /p disk=Disk:  
-timeout /t 2 >nul
-echo.
-echo checking disk %disk%
-chkdsk %disk% /F
-
-echo.
-echo success!
-pause
-goto rate
-
-
-:: ======================================= DISKSCAN END ======================================= ::
-
-
-:: ========================================= DOWNLOADAPPS ========================================= ::
-:downloadapps
-call :LOG "downloader opened"
-color %color%
-cls
-echo =========================== DOWNLOADER ===========================
-echo.
-echo.
-echo Announcement! THESE APPS ARE NOT SPONSORED! ONLY "RECOMMENED"!
-echo.
-echo Avilable apps:
-echo 1.: JAVA
-echo 2.: Localsend
-echo.
-echo 0: go back to menu
-echo.
-
-set /p appdown=App: 
-if "%coloruser%"=="0" (
-  echo heading to menu
-  cls
-  goto menu
-
-) else if "%appdown%"=="1" (
-echo downloading JAVA...
-goto javainstall0001
-
-) else if "%appdown%"=="2" (
-echo downloading localsend...
-goto localsendinstall0001
-
-
-) else if "%appdown%"=="0" (
-echo Opening menu
-timeout /t 1 >nul
-goto MENU
-
-) else (
-    echo unknown option
-    color C4
-    timeout /t 1 >nul
-    echo press any key to choose another one
-    Color C1
-    pause >nul
-    goto downloadapps
-)
-
-:javainstall0001
-winget install --id=Oracle.JavaRuntimeEnvironment -e
-echo Download ended.
-echo Press any key to go back to menu...
-pause >nul
-goto MENU
-
-:localsendinstall0001
-winget install localsend
-echo Download ended.
-echo Press any key to go back to menu...
-pause >nul
-goto MENU
-
-
-
-:: ======================================= DOWNLOADAPPS END ======================================= ::
-
-
-:: ====================== FULLVER ============================= :: <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-:fullver
-call :LOG "FULLVER started..."
-
-echo winget update in process...
-winget update --all
-timeout /t 3 >nul
-echo successfully updated!
-timeout /t 1 >nul /nobreak
-
-REM LINT:IGNORE W013
-:driver
-cls
-echo driver update in progress...
-driverquery /v
-timeout /t 1 /nobreak >nul
-echo just a second...
-driverquery /si
-
-cls
-echo Temps deleteing in progess. please wait...
-timeout /t 1 /nobreak >nul
-
-echo User temp deleteing...
-del /s /f /q "%TEMP%\*.*"
-for /d %%x in ("%TEMP%\*") do rd /s /q "%%x"
-echo SUCCESS
-
-echo System temp deleteing
-del /s /f /q "C:\Windows\Temp\*.*"
-for /d %%x in ("C:\Windows\Temp\*") do rd /s /q "%%x"
-echo SUCCESS
-
-
-echo Public users temp deleteing
-del /s /f /q "C:\Users\Public\temp*.*"
-for /d %%x in ("C:\Users\Public\temp*") do rd /s /q "%%x"
-echo SUCCESS
-
-timeout /t 1 >nul /nobreak
-
-cls
-echo tempomary files deleting in progress...
-cleanmgr /sagerun:1
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-timeout /t 1 >nul /nobreak
-
-cls
-echo corrupted files repearing...
-Dism.exe /online /Cleanup-Image /StartComponentCleanup
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-
-cls
-echo corrupted files repearing...
-sfc /scannow
-timeout /t 3 >nul /nobreak
-echo SUCCESS!
-cls
-echo fullupdate success! heading to exit...
-timeout /t 3 >nul
-call :LOG "FULLVER finished"
-goto exit
-:: ============================= FULLVER END ============================ ::
-
-:dirlock
-echo this is not aviable now (maybe in future)
-pause 
-goto exit
-
-cacls "mappa" /e /p everyone:n
-
-cacls "mappa" /e /p everyone:f
-
-
-pause
-pause
-pause
-pause
-pause
-pause
-pause
-pause
-pause
-goto rate
-
-:: =================== DIRLOCK END ========================= ::
-
-:: ========================= RATE ============================== ::
-:rate
-call :LOG "Rate opened"
-
-cls
-echo warning panel are showing up! please wait!
-echo Set s = CreateObject("WScript.Shell") > wincleanpopup.vbs
-echo s.Popup "operation complete", 6, "winclean %ver% popup window", 64 >> wincleanpopup.vbs
-start /wait wincleanpopup.vbs
-del wincleanpopup.vbs
-
-cls
-echo RATE!
-set /p rate= Rate the winclean app! (write numbers between 1-10): 
-call :LOG "%user% rated to %rate%"
-timeout /t 1 >nul
-cls
-echo Thank you! You rated to: %rate%
-echo.
-echo press any button to return to menu!
-pause >nul
-goto menu
-
-
-:: ============================================= LOGGER SYSTEM ============================================= ::
-
-:: =========== savecolor sth =========== ::
-:SAVE_COLOR
-echo %color%>"%COLOR_FILE%"
-echo %colorprofile%>"%COLORPROFILE_FILE%"
-:: =========== savecolor end =========== ::
-
-:LOG_DEVICE
-set DEVICE_NAME=%COMPUTERNAME%
-call :LOG "devicename: %DEVICE_NAME%"
-goto :EOF
-
-:LOG
-set MSG=%~1
-set TIME_STR=%TIME:~0,8%
-set LINE=[%DATE% %TIME_STR%] %MSG%
-echo %LINE% >> "%MAIN_LOG%"
-echo %LINE% >> "%LATEST_LOG%"
-goto :EOF
-
-
-:: ============================================= LOGGER END ============================================= ::
-
-:: ========================================= LOG WATCHER ========================================= ::
-:watchlog
-call :LOG "watchlog opened"
-cls
-echo ===================== WATCH LOG =====================
-echo.
-if exist "%MAIN_LOG%" (
-    type "%MAIN_LOG%"
-) else (
-    echo LOG file not found: %MAIN_LOG%
-)
-echo.
-echo press any key to return to menu
-pause >nul
-goto MENU
-:: ====================================== LOG WATCHER END ====================================== ::
-
-
-:: ============================================ QUIT =========================================== ::
-
-:exit
-call :LOG "winclean closeing..."
-title winclean quiting %ver%
-cls
-echo Thank you for using winclean by adiservers-pro!
-echo Quiting...
-	echo [=====]
-	timeout /t 1 >nul
-	cls
-echo Thank you for using winclean by adiservers-pro!
-echo Quiting...
-	echo [==== ]
-	timeout /t 1 >nul
-	cls
-echo Thank you for using winclean by adiservers-pro!
-echo Quiting...
-	echo [===  ]
-	timeout /t 1 >nul
-	cls
-echo Thank you for using winclean by adiservers-pro!
-echo Quiting...
-	echo [==   ]
-	timeout /t 1 >nul
-	cls
-echo Thank you for using winclean by adiservers-pro!
-echo Quiting...
-	echo [=    ]
-	timeout /t 1 >nul
-call :LOG "winclean closed!"
-exit
-
-:restart
-call :LOG "winclean restarting..."
-echo Thank you for using winclean by adiservers-pro!
-echo Restarting...
-	echo [===]
-	timeout /t 1 >nul
-	cls
-echo Thank you for using winclean by adiservers-pro!
-echo Restarting...
-	echo [== ]
-	timeout /t 1 >nul
-	cls
-echo Thank you for using winclean by adiservers-pro!
-echo Restarting...
-	echo [=  ]
-	timeout /t 1 >nul
-cls
-echo \
-timeout /t 1 >nul /nobreak
-cls
-echo ^|
-timeout /t 1 >nul /nobreak
-cls
-echo /
-timeout /t 1 >nul /nobreak
-cls
-echo -
-timeout /t 1 >nul /nobreak
-cls
-echo \
-timeout /t 1 >nul /nobreak
-cls
-echo ^|
-timeout /t 1 >nul /nobreak
-cls
-echo /
-timeout /t 1 >nul /nobreak
-cls
-call :LOG "Winclean restarted"
-REM LINT:IGNORE E014, W033
-call "%~f0"
 exit /b
 
+:init
 
-:todo
-:: ================== TODO !!! ================== ::
-echo " :dirlock "
-echo " older versions > appdata"
-echo " old apps (deep scan) dump delete "
-pause
-REM LINT:IGNORE W001
-goto menu
+set "WC_DIR=%APPDATA%\winclean"
+set "LOG_DIR=%WC_DIR%\logs"
+set "MAIN_LOG=%LOG_DIR%\winclean.log"
+set "LATEST_LOG=%LOG_DIR%\winclean-latest.log"
+set "COLOR_FILE=%WC_DIR%\colormode.cfg"
+set "PROFILE_FILE=%WC_DIR%\colorprofile.cfg"
+set "USER_FILE=%WC_DIR%\user.cfg"
+set "LOCK_FILE=%WC_DIR%\locker.pw"
+
+if not exist "%WC_DIR%" mkdir "%WC_DIR%"
+if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+
+set "color=B"
+set "colorprofile=Light Aqua"
+set "user=User"
+
+if exist "%COLOR_FILE%" set /p color=<"%COLOR_FILE%"
+if exist "%PROFILE_FILE%" set /p colorprofile=<"%PROFILE_FILE%"
+if exist "%USER_FILE%" set /p user=<"%USER_FILE%"
+
+if not defined color set "color=B"
+if not defined colorprofile set "colorprofile=Light Aqua"
+if not defined user set "user=User"
+
+:: broken color values fall back to the default
+set "color=%color:"=%"
+echo(%color%| findstr /r /x "[0-9A-Fa-f][0-9A-Fa-f]*" >nul 2>&1
+if errorlevel 1 set "color=B"
+
+if not exist "%MAIN_LOG%" (
+    echo WINCLEAN LOG>"%MAIN_LOG%"
+    echo Created: %DATE% %TIME%>>"%MAIN_LOG%"
+)
+> "%LATEST_LOG%" echo(=== WINCLEAN - LATEST SESSION ===
+>>"%LATEST_LOG%" echo(Started: %DATE% %TIME%
+>>"%LATEST_LOG%" echo(Version: %ver%
+
+cls
+echo.
+echo   starting winclean %ver%...
+echo   [ok] config   color=%colorprofile%
+echo   [ok] logs     %LOG_DIR%
+
+call :log "boot started"
+call :log "color=%colorprofile% (%color%)"
+call :log_device
+
+title winclean %ver%
+color %color%
+
+:: ================================ MENU ================================ ::
+:menu
+cls
+color %color%
+title winclean %ver%
+echo  +==================================================================+
+echo    WINCLEAN %ver%   -   MAIN MENU
+call :echo_user
+echo  +==================================================================+
+echo.
+echo    CLEANING
+echo      1  Temp files                user + system + public temp
+echo      2  Old Windows Update files  SoftwareDistribution + DISM
+echo      3  Disk cleanup              cleanmgr, all profiles
+echo      4  Repair system files       DISM RestoreHealth + SFC
+echo      5  Winget app updates        upgrade every package
+echo      6  Driver check / update     pnputil + Windows Update
+echo.
+echo    TOOLS
+echo      7  Folder locker             lock / unlock with password
+echo      8  Disk health               chkdsk
+echo      9  RAM check                 Windows memory diagnostic
+echo      A  Deep clean + repair       1 + 2 + 3 + 4
+echo.
+echo    OTHER
+echo      B  Change color
+echo      C  Change username
+echo      D  Recommended apps
+echo      E  Show log
+echo      R  Run everything, then exit
+echo      S  Restart winclean
+echo      0  Exit
+echo.
+choice /c 123456789ABCDERS0 /n /m "  select > "
+set "SEL=%errorlevel%"
+
+if "%SEL%"=="16" goto :do_restart
+if "%SEL%"=="17" goto :do_exit
+if "%SEL%"=="15" call :opt_runall
+if "%SEL%"=="15" goto :do_exit
+if "%SEL%"=="14" call :opt_log
+if "%SEL%"=="13" call :opt_apps
+if "%SEL%"=="12" call :opt_user
+if "%SEL%"=="11" call :opt_color
+if "%SEL%"=="10" call :opt_deep
+if "%SEL%"=="9"  call :opt_ram
+if "%SEL%"=="8"  call :opt_disk
+if "%SEL%"=="7"  call :opt_locker
+if "%SEL%"=="6"  call :opt_driver
+if "%SEL%"=="5"  call :opt_winget
+if "%SEL%"=="4"  call :opt_repair
+if "%SEL%"=="3"  call :opt_cleanmgr
+if "%SEL%"=="2"  call :opt_wuclean
+if "%SEL%"=="1"  call :opt_temp
+goto :menu
+
+:: ============================== RESTART =============================== ::
+:do_restart
+call :log "winclean restarting..."
+start "" "%~f0"
+exit /b
+
+:: ================================ EXIT ================================ ::
+:do_exit
+call :log "winclean closed"
+title winclean exiting
+cls
+echo.
+echo   thanks for using winclean!
+echo.
+timeout /t 1 >nul
+exit /b
+
+:: =============================== HELPERS ============================== ::
+
+:head
+cls
+color %color%
+echo  +==================================================================+
+echo    WINCLEAN %ver%   -   %~1
+call :echo_user
+echo  +==================================================================+
+echo.
+goto :EOF
+
+:echo_user
+set /p "=    user: %user%" <nul
+echo.
+goto :EOF
+
+:finish
+echo.
+set "rate="
+set /p "rate=  rate winclean 1-10 (enter = skip): "
+set "rate=%rate:"=%"
+if not defined rate goto :rate_done
+set "rated=0"
+for %%R in (1 2 3 4 5 6 7 8 9 10) do if "%rate%"=="%%R" set "rated=1"
+if "%rated%"=="0" (
+    echo   please use a number from 1 to 10 - rating skipped.
+    goto :rate_done
+)
+call :log "rated %rate%"
+echo   thanks for the %rate%/10!
+:rate_done
+echo.
+echo   press any key to return to the menu...
+pause >nul
+goto :EOF
+
+:log
+set "LINE=[%DATE% %TIME:~0,8%] %~1"
+set /p "=%LINE%" <nul >>"%MAIN_LOG%"
+echo.>>"%MAIN_LOG%"
+set /p "=%LINE%" <nul >>"%LATEST_LOG%"
+echo.>>"%LATEST_LOG%"
+goto :EOF
+
+:log_device
+call :log "devicename: %COMPUTERNAME%"
+goto :EOF
+
+:save_config
+> "%COLOR_FILE%" set /p "=%color%" <nul
+> "%PROFILE_FILE%" set /p "=%colorprofile%" <nul
+goto :EOF
+
+:clean_dir
+if "%~1"=="" goto :EOF
+if not exist "%~1\" goto :EOF
+del /s /f /q "%~1\*" >nul 2>&1
+for /d %%D in ("%~1\*") do if exist "%%D\" rd /s /q "%%D" 2>nul
+goto :EOF
+
+:: ================================ STEPS =============================== ::
+
+:step_temp
+echo   - user temp: %TEMP%
+call :clean_dir "%TEMP%"
+echo   - system temp: %SystemRoot%\Temp
+call :clean_dir "%SystemRoot%\Temp"
+echo   - public temp: %PUBLIC%\temp
+call :clean_dir "%PUBLIC%\temp"
+echo   done.
+goto :EOF
+
+:step_wuclean
+echo   - stopping Windows Update and BITS...
+net stop wuauserv /y >nul 2>&1
+net stop bits /y >nul 2>&1
+echo   - deleting downloaded updates: %SystemRoot%\SoftwareDistribution\Download
+call :clean_dir "%SystemRoot%\SoftwareDistribution\Download"
+echo   - cleaning the component store (this can take a few minutes)...
+Dism.exe /online /Cleanup-Image /StartComponentCleanup
+echo   - restarting services...
+net start bits >nul 2>&1
+net start wuauserv >nul 2>&1
+echo   done.
+goto :EOF
+
+:step_cleanmgr
+if not exist "%SystemRoot%\System32\cleanmgr.exe" (
+    echo   - cleanmgr.exe not found on this system, skipped.
+    goto :EOF
+)
+echo   - preparing disk cleanup profiles...
+for /f "delims=" %%K in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul ^| findstr /b /c:"HKEY_"') do reg add "%%K" /v StateFlags0001 /t REG_DWORD /d 2 /f >nul 2>&1
+echo   - running Disk Cleanup, a window will appear...
+cleanmgr /sagerun:1
+echo   done.
+goto :EOF
+
+:step_repair
+echo   - step 1/2: DISM RestoreHealth (can take 5-10 minutes)
+Dism.exe /online /Cleanup-Image /RestoreHealth
+echo   - step 2/2: System File Checker
+sfc /scannow
+echo   done.
+goto :EOF
+
+:step_winget
+where winget >nul 2>&1
+if errorlevel 1 (
+    echo   - winget is not available on this system, skipped.
+    goto :EOF
+)
+echo   - checking for app updates...
+winget upgrade --all --accept-package-agreements --accept-source-agreements
+echo   done.
+goto :EOF
+
+:: =============================== OPTIONS ============================== ::
+
+:opt_temp
+call :head "TEMP FILES"
+call :log "temp cleanup started"
+call :step_temp
+call :log "temp cleanup finished"
+goto :finish
+
+:opt_wuclean
+call :head "OLD WINDOWS UPDATE FILES"
+call :log "old windows update cleanup started"
+call :step_wuclean
+call :log "old windows update cleanup finished"
+goto :finish
+
+:opt_cleanmgr
+call :head "DISK CLEANUP"
+call :log "disk cleanup started"
+call :step_cleanmgr
+call :log "disk cleanup finished"
+goto :finish
+
+:opt_repair
+call :head "REPAIR SYSTEM FILES"
+call :log "repair started"
+call :step_repair
+call :log "repair finished"
+goto :finish
+
+:opt_winget
+call :head "WINGET UPDATES"
+call :log "winget update started"
+call :step_winget
+call :log "winget update finished"
+goto :finish
+
+:opt_driver
+call :head "DRIVER CHECK / UPDATE"
+call :log "driver check opened"
+set "drvcount=0"
+for /f %%N in ('pnputil /enum-drivers 2^>nul ^| find /c "oem"') do set "drvcount=%%N"
+echo   %drvcount% driver packages are in the driver store.
+echo.
+echo   Drivers are updated through Windows Update or the pc maker's tool.
+echo.
+echo    1  Open Windows Update     (recommended)
+echo    2  List installed drivers  (pnputil)
+echo    0  Back
+echo.
+choice /c 120 /n /m "  select > "
+set "SUBSEL=%errorlevel%"
+if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="2" goto :driver_list
+echo.
+echo   opening Windows Update...
+start "" ms-settings:windowsupdate
+goto :finish
+:driver_list
+echo.
+pnputil /enum-drivers | more
+goto :finish
+
+:opt_locker
+call :head "FOLDER LOCKER"
+call :log "folder locker opened"
+echo   Locking hides the folder and blocks access until you unlock it.
+echo   The password is stored in: %LOCK_FILE%
+echo.
+echo    1  Lock a folder
+echo    2  Unlock a folder
+echo    0  Back
+echo.
+choice /c 120 /n /m "  select > "
+set "SUBSEL=%errorlevel%"
+if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="2" goto :locker_unlock
+goto :locker_lock
+
+:locker_lock
+echo.
+set "target="
+set /p "target=  folder to lock (full path): "
+set "target=%target:"=%"
+if not defined target goto :EOF
+if not exist "%target%\" (
+    echo   [!] not a folder: %target%
+    goto :EOF
+)
+for %%R in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do if /i "%target%"=="%%R:\" goto :locker_guard
+if /i "%target%"=="%SystemRoot%" goto :locker_guard
+if /i "%target%"=="%SystemRoot%\System32" goto :locker_guard
+if /i "%target%"=="%SystemRoot%\SysWOW64" goto :locker_guard
+if /i "%target%"=="%APPDATA%" goto :locker_guard
+if /i "%target%"=="%WC_DIR%" goto :locker_guard
+if /i "%target%"=="%USERPROFILE%" goto :locker_guard
+
+set "pw="
+set /p "pw=  password: "
+set "pw=%pw:"=%"
+if not defined pw (
+    echo   [!] a password is required.
+    goto :EOF
+)
+set "pw2="
+set /p "pw2=  repeat password: "
+set "pw2=%pw2:"=%"
+if not "%pw%"=="%pw2%" (
+    echo   [!] the passwords do not match.
+    goto :EOF
+)
+> "%LOCK_FILE%" set /p "=%pw%" <nul
+
+echo   locking %target% ...
+attrib +h "%target%" >nul 2>&1
+icacls "%target%" /deny "*S-1-1-0:(OI)(CI)(F)" >nul 2>&1
+if errorlevel 1 (
+    attrib -h "%target%" >nul 2>&1
+    echo   [!] icacls failed, the folder was not locked.
+    goto :EOF
+)
+call :log "folder locked"
+echo   [ok] locked. use menu 7 to unlock it with this password.
+goto :finish
+
+:locker_unlock
+echo.
+set "target="
+set /p "target=  folder to unlock (full path): "
+set "target=%target:"=%"
+if not defined target goto :EOF
+if not exist "%target%\" (
+    echo   [!] not a folder: %target%
+    goto :EOF
+)
+set "pw="
+set /p "pw=  password: "
+set "pw=%pw:"=%"
+set "stored="
+if exist "%LOCK_FILE%" set /p stored=<"%LOCK_FILE%"
+if not defined stored (
+    echo   [!] no password saved yet, lock a folder first.
+    goto :EOF
+)
+if not "%pw%"=="%stored%" (
+    echo   [!] wrong password.
+    call :log "folder unlock failed"
+    goto :EOF
+)
+icacls "%target%" /remove:d *S-1-1-0 >nul 2>&1
+attrib -h "%target%" >nul 2>&1
+call :log "folder unlocked"
+echo   [ok] unlocked.
+goto :finish
+
+:locker_guard
+echo   [!] this folder is protected, pick another one.
+goto :EOF
+
+:opt_disk
+call :head "DISK HEALTH"
+call :log "disk check opened"
+set "target="
+set /p "target=  drive letter (example C): "
+set "target=%target:"=%"
+if not defined target goto :EOF
+set "drive=%target:~0,1%:"
+if not exist "%drive%\" (
+    echo   [!] drive not found: %drive%
+    goto :EOF
+)
+echo.
+echo    1  Check only      read-only, only reports problems
+echo    2  Check and fix   chkdsk /F, may ask for a restart
+echo    0  Back
+echo.
+choice /c 120 /n /m "  select > "
+set "SUBSEL=%errorlevel%"
+if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="1" goto :disk_check
+echo.
+chkdsk %drive% /F
+goto :finish
+:disk_check
+echo.
+chkdsk %drive%
+goto :finish
+
+:opt_ram
+call :head "RAM CHECK"
+call :log "ram check opened"
+if not exist "%SystemRoot%\System32\mdsched.exe" (
+    echo   [!] mdsched.exe not found on this system.
+    goto :EOF
+)
+start "" "%SystemRoot%\System32\mdsched.exe"
+echo   [ok] choose "Restart now" or "Schedule a restart" in the window.
+goto :finish
+
+:opt_deep
+call :head "DEEP CLEAN + REPAIR"
+call :log "deep clean started"
+echo   1/4 temp files
+call :step_temp
+echo.
+echo   2/4 old windows update files
+call :step_wuclean
+echo.
+echo   3/4 disk cleanup
+call :step_cleanmgr
+echo.
+echo   4/4 repair system files
+call :step_repair
+call :log "deep clean finished"
+goto :finish
+
+:opt_runall
+call :head "RUN EVERYTHING"
+call :log "run all started"
+echo   1/5 temp files
+call :step_temp
+echo.
+echo   2/5 old windows update files
+call :step_wuclean
+echo.
+echo   3/5 disk cleanup
+call :step_cleanmgr
+echo.
+echo   4/5 repair system files
+call :step_repair
+echo.
+echo   5/5 winget updates
+call :step_winget
+call :log "run all finished"
+goto :EOF
+
+:opt_color
+call :head "COLOR"
+echo   current: %colorprofile%  (%color%)
+echo.
+echo    1 Blue           2 Green          3 Aqua            4 Red
+echo    5 Purple         6 Yellow         7 White           8 Gray
+echo    9 Light Blue    A Light Green    B Light Aqua      C Light Red
+echo    D Light Purple  E Light Yellow   F Bright White
+echo.
+echo    0  back
+echo.
+choice /c 123456789ABCDEF0 /n /m "  color > "
+set "SUBSEL=%errorlevel%"
+if "%SUBSEL%"=="16" goto :EOF
+set "COLORS=01:Blue 02:Green 03:Aqua 04:Red 05:Purple 06:Yellow 07:White 08:Gray 09:Light_Blue 0A:Light_Green 0B:Light_Aqua 0C:Light_Red 0D:Light_Purple 0E:Light_Yellow 0F:Bright_White"
+for /f "tokens=%SUBSEL% delims= " %%C in ("%COLORS%") do set "PAIR=%%C"
+for /f "tokens=1,2 delims=:" %%A in ("%PAIR%") do (set "color=%%A" & set "colorprofile=%%B")
+set "colorprofile=%colorprofile:_= %"
+color %color%
+call :save_config
+call :log "color changed: %colorprofile%"
+echo.
+echo   color set to %colorprofile%.
+goto :finish
+
+:opt_user
+call :head "USERNAME"
+call :log "username change opened"
+set "newuser="
+set /p "newuser=  new username: "
+set "newuser=%newuser:"=%"
+if not defined newuser goto :EOF
+set "user=%newuser%"
+> "%USER_FILE%" set /p "=%user%" <nul
+call :log "username changed"
+echo.
+call :echo_user
+goto :finish
+
+:opt_apps
+call :head "RECOMMENDED APPS"
+call :log "downloader opened"
+echo   Not sponsored, only recommended.
+echo.
+echo    1  Java       Oracle Java Runtime Environment
+echo    2  LocalSend  local file sharing
+echo    0  Back
+echo.
+choice /c 120 /n /m "  app > "
+set "SUBSEL=%errorlevel%"
+if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="2" goto :app_localsend
+echo.
+echo   installing Java...
+winget install --id=Oracle.JavaRuntimeEnvironment -e --accept-package-agreements --accept-source-agreements
+goto :finish
+:app_localsend
+echo.
+echo   installing LocalSend...
+winget install localsend --accept-package-agreements --accept-source-agreements
+goto :finish
+
+:opt_log
+call :head "LOG"
+call :log "log opened"
+if not exist "%MAIN_LOG%" (
+    echo   no log file yet.
+    goto :EOF
+)
+more < "%MAIN_LOG%"
+goto :finish
