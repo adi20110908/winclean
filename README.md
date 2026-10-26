@@ -6,7 +6,7 @@ from the menu. It cleans temporary files, throws out old Windows Update
 downloads, repairs the system image, updates your apps, checks drivers,
 health-checks your disks and RAM, and can lock a folder behind a password.
 
-Latest version: **v4.4.0**
+Latest version: **v4.4.1**
 
 If the latest version is not working, use an older one:
 https://github.com/adi20110908/winclean/tree/older-versions
@@ -33,7 +33,7 @@ https://github.com/adi20110908/winclean/tree/older-versions
 
 ```
   +==================================================================+
-    WINCLEAN v4.4.0   -   MAIN MENU
+    WINCLEAN v4.4.1   -   MAIN MENU
     user: Adi
   +==================================================================+
 
@@ -66,7 +66,8 @@ https://github.com/adi20110908/winclean/tree/older-versions
 Every screen has the same framed header (version, screen name, your
 username) and every operation ends with an optional rating prompt — press
 **Enter** to skip it, nothing is sent anywhere, the rating is only written
-to the local log.
+to the local log. After the prompt you are back at the main menu; winclean
+closes only when you press `0` (or after `R`, which is meant to quit).
 
 ---
 
@@ -155,6 +156,7 @@ It is an access-permission lock, **not encryption**:
 
 | Version | |
 |---|---|
-| **v4.4.0** | Rewritten around shared subroutines (964 → 580 lines). Menu moved to single-key `choice` input with grouped sections; boot no longer runs from `System32`; `cleanmgr` profiles are configured before `sagerun`; repair uses `DISM /RestoreHealth`; `mdsched` is called from `System32`; user input can no longer break the command line. Added the old Windows Update cleanup, a working folder locker and a real driver check. |
+| **v4.4.1** | Fixed the app quitting right after the rating prompt: every option now hands control back to the main menu explicitly, instead of depending on call/return bookkeeping. |
+| v4.4.0 | Rewritten around shared subroutines (964 → 580 lines). Menu moved to single-key `choice` input with grouped sections; boot no longer runs from `System32`; `cleanmgr` profiles are configured before `sagerun`; repair uses `DISM /RestoreHealth`; `mdsched` is called from `System32`; user input can no longer break the command line. Added the old Windows Update cleanup, a working folder locker and a real driver check. |
 | v4.3.1.1.1.1b | Previous release. |
 | older | See the [`older-versions`](https://github.com/adi20110908/winclean/tree/older-versions) branch. |

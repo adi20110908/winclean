@@ -5,7 +5,7 @@ REM LINT:IGNORE W012, W030
 :: TUDJA AZ ÉKEZETEKET!!
 :: version slogen: folderlocker -- betaversion -- 1% //loggerupdate //recommenedapps
 
-set "ver=v4.4.0"
+set "ver=v4.4.1"
 
 :: ================================ BOOT ================================ ::
 title winclean booting...
@@ -117,22 +117,21 @@ set "SEL=%errorlevel%"
 
 if "%SEL%"=="16" goto :do_restart
 if "%SEL%"=="17" goto :do_exit
-if "%SEL%"=="15" call :opt_runall
-if "%SEL%"=="15" goto :do_exit
-if "%SEL%"=="14" call :opt_log
-if "%SEL%"=="13" call :opt_apps
-if "%SEL%"=="12" call :opt_user
-if "%SEL%"=="11" call :opt_color
-if "%SEL%"=="10" call :opt_deep
-if "%SEL%"=="9"  call :opt_ram
-if "%SEL%"=="8"  call :opt_disk
-if "%SEL%"=="7"  call :opt_locker
-if "%SEL%"=="6"  call :opt_driver
-if "%SEL%"=="5"  call :opt_winget
-if "%SEL%"=="4"  call :opt_repair
-if "%SEL%"=="3"  call :opt_cleanmgr
-if "%SEL%"=="2"  call :opt_wuclean
-if "%SEL%"=="1"  call :opt_temp
+if "%SEL%"=="15" goto :opt_runall
+if "%SEL%"=="14" goto :opt_log
+if "%SEL%"=="13" goto :opt_apps
+if "%SEL%"=="12" goto :opt_user
+if "%SEL%"=="11" goto :opt_color
+if "%SEL%"=="10" goto :opt_deep
+if "%SEL%"=="9"  goto :opt_ram
+if "%SEL%"=="8"  goto :opt_disk
+if "%SEL%"=="7"  goto :opt_locker
+if "%SEL%"=="6"  goto :opt_driver
+if "%SEL%"=="5"  goto :opt_winget
+if "%SEL%"=="4"  goto :opt_repair
+if "%SEL%"=="3"  goto :opt_cleanmgr
+if "%SEL%"=="2"  goto :opt_wuclean
+if "%SEL%"=="1"  goto :opt_temp
 goto :menu
 
 :: ============================== RESTART =============================== ::
@@ -187,7 +186,7 @@ echo   thanks for the %rate%/10!
 echo.
 echo   press any key to return to the menu...
 pause >nul
-goto :EOF
+goto :menu
 
 :log
 set "LINE=[%DATE% %TIME:~0,8%] %~1"
@@ -322,7 +321,7 @@ echo    0  Back
 echo.
 choice /c 120 /n /m "  select > "
 set "SUBSEL=%errorlevel%"
-if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="3" goto :menu
 if "%SUBSEL%"=="2" goto :driver_list
 echo.
 echo   opening Windows Update...
@@ -345,7 +344,7 @@ echo    0  Back
 echo.
 choice /c 120 /n /m "  select > "
 set "SUBSEL=%errorlevel%"
-if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="3" goto :menu
 if "%SUBSEL%"=="2" goto :locker_unlock
 goto :locker_lock
 
@@ -354,10 +353,10 @@ echo.
 set "target="
 set /p "target=  folder to lock (full path): "
 set "target=%target:"=%"
-if not defined target goto :EOF
+if not defined target goto :menu
 if not exist "%target%\" (
     echo   [!] not a folder: %target%
-    goto :EOF
+    goto :menu
 )
 for %%R in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do if /i "%target%"=="%%R:\" goto :locker_guard
 if /i "%target%"=="%SystemRoot%" goto :locker_guard
@@ -372,14 +371,14 @@ set /p "pw=  password: "
 set "pw=%pw:"=%"
 if not defined pw (
     echo   [!] a password is required.
-    goto :EOF
+    goto :menu
 )
 set "pw2="
 set /p "pw2=  repeat password: "
 set "pw2=%pw2:"=%"
 if not "%pw%"=="%pw2%" (
     echo   [!] the passwords do not match.
-    goto :EOF
+    goto :menu
 )
 > "%LOCK_FILE%" set /p "=%pw%" <nul
 
@@ -389,7 +388,7 @@ icacls "%target%" /deny "*S-1-1-0:(OI)(CI)(F)" >nul 2>&1
 if errorlevel 1 (
     attrib -h "%target%" >nul 2>&1
     echo   [!] icacls failed, the folder was not locked.
-    goto :EOF
+    goto :menu
 )
 call :log "folder locked"
 echo   [ok] locked. use menu 7 to unlock it with this password.
@@ -400,10 +399,10 @@ echo.
 set "target="
 set /p "target=  folder to unlock (full path): "
 set "target=%target:"=%"
-if not defined target goto :EOF
+if not defined target goto :menu
 if not exist "%target%\" (
     echo   [!] not a folder: %target%
-    goto :EOF
+    goto :menu
 )
 set "pw="
 set /p "pw=  password: "
@@ -412,12 +411,12 @@ set "stored="
 if exist "%LOCK_FILE%" set /p stored=<"%LOCK_FILE%"
 if not defined stored (
     echo   [!] no password saved yet, lock a folder first.
-    goto :EOF
+    goto :menu
 )
 if not "%pw%"=="%stored%" (
     echo   [!] wrong password.
     call :log "folder unlock failed"
-    goto :EOF
+    goto :menu
 )
 icacls "%target%" /remove:d *S-1-1-0 >nul 2>&1
 attrib -h "%target%" >nul 2>&1
@@ -427,7 +426,7 @@ goto :finish
 
 :locker_guard
 echo   [!] this folder is protected, pick another one.
-goto :EOF
+goto :menu
 
 :opt_disk
 call :head "DISK HEALTH"
@@ -435,11 +434,11 @@ call :log "disk check opened"
 set "target="
 set /p "target=  drive letter (example C): "
 set "target=%target:"=%"
-if not defined target goto :EOF
+if not defined target goto :menu
 set "drive=%target:~0,1%:"
 if not exist "%drive%\" (
     echo   [!] drive not found: %drive%
-    goto :EOF
+    goto :menu
 )
 echo.
 echo    1  Check only      read-only, only reports problems
@@ -448,7 +447,7 @@ echo    0  Back
 echo.
 choice /c 120 /n /m "  select > "
 set "SUBSEL=%errorlevel%"
-if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="3" goto :menu
 if "%SUBSEL%"=="1" goto :disk_check
 echo.
 chkdsk %drive% /F
@@ -463,7 +462,7 @@ call :head "RAM CHECK"
 call :log "ram check opened"
 if not exist "%SystemRoot%\System32\mdsched.exe" (
     echo   [!] mdsched.exe not found on this system.
-    goto :EOF
+    goto :menu
 )
 start "" "%SystemRoot%\System32\mdsched.exe"
 echo   [ok] choose "Restart now" or "Schedule a restart" in the window.
@@ -504,7 +503,7 @@ echo.
 echo   5/5 winget updates
 call :step_winget
 call :log "run all finished"
-goto :EOF
+goto :do_exit
 
 :opt_color
 call :head "COLOR"
@@ -519,7 +518,7 @@ echo    0  back
 echo.
 choice /c 123456789ABCDEF0 /n /m "  color > "
 set "SUBSEL=%errorlevel%"
-if "%SUBSEL%"=="16" goto :EOF
+if "%SUBSEL%"=="16" goto :menu
 set "COLORS=01:Blue 02:Green 03:Aqua 04:Red 05:Purple 06:Yellow 07:White 08:Gray 09:Light_Blue 0A:Light_Green 0B:Light_Aqua 0C:Light_Red 0D:Light_Purple 0E:Light_Yellow 0F:Bright_White"
 for /f "tokens=%SUBSEL% delims= " %%C in ("%COLORS%") do set "PAIR=%%C"
 for /f "tokens=1,2 delims=:" %%A in ("%PAIR%") do (set "color=%%A" & set "colorprofile=%%B")
@@ -537,7 +536,7 @@ call :log "username change opened"
 set "newuser="
 set /p "newuser=  new username: "
 set "newuser=%newuser:"=%"
-if not defined newuser goto :EOF
+if not defined newuser goto :menu
 set "user=%newuser%"
 > "%USER_FILE%" set /p "=%user%" <nul
 call :log "username changed"
@@ -556,7 +555,7 @@ echo    0  Back
 echo.
 choice /c 120 /n /m "  app > "
 set "SUBSEL=%errorlevel%"
-if "%SUBSEL%"=="3" goto :EOF
+if "%SUBSEL%"=="3" goto :menu
 if "%SUBSEL%"=="2" goto :app_localsend
 echo.
 echo   installing Java...
@@ -573,7 +572,7 @@ call :head "LOG"
 call :log "log opened"
 if not exist "%MAIN_LOG%" (
     echo   no log file yet.
-    goto :EOF
+    goto :menu
 )
 more < "%MAIN_LOG%"
 goto :finish
