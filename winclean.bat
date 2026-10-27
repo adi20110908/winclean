@@ -1,13 +1,14 @@
 @echo off
 setlocal EnableExtensions
-:: ##release: 2026.03.23
+:: ##release: 2026.10.27
 REM LINT:IGNORE W012, W030
 :: TUDJA AZ ÉKEZETEKET!!
 :: version slogen: folderlocker -- betaversion -- 1% //loggerupdate //recommenedapps
 
-set "ver=v4.4.1"
+set "ver=v4.5.0"
 
 :: ================================ BOOT ================================ ::
+
 title winclean booting...
 chcp 65001 >nul
 cd /d "%~dp0"
@@ -17,6 +18,7 @@ mode con: cols=78 lines=40 >nul 2>&1
 fltmc >nul 2>&1
 if errorlevel 1 goto :need_admin
 goto :init
+
 :need_admin
 color C1
 echo.
@@ -66,10 +68,13 @@ if not exist "%MAIN_LOG%" (
 >>"%LATEST_LOG%" echo(Started: %DATE% %TIME%
 >>"%LATEST_LOG%" echo(Version: %ver%
 
+call :getfree
+
 cls
 echo.
 echo   starting winclean %ver%...
 echo   [ok] config   color=%colorprofile%
+echo   [ok] disk     %WC_FREE% free on %SystemDrive%
 echo   [ok] logs     %LOG_DIR%
 
 call :log "boot started"
@@ -80,6 +85,7 @@ title winclean %ver%
 color %color%
 
 :: ================================ MENU ================================ ::
+
 :menu
 cls
 color %color%
@@ -91,56 +97,70 @@ echo  +==================================================================+
 echo.
 echo    CLEANING
 echo      1  Temp files                user + system + public temp
-echo      2  Old Windows Update files  SoftwareDistribution + DISM
-echo      3  Disk cleanup              cleanmgr, all profiles
-echo      4  Repair system files       DISM RestoreHealth + SFC
-echo      5  Winget app updates        upgrade every package
-echo      6  Driver check / update     pnputil + Windows Update
+echo      2  Browser cache             Chrome / Edge / Firefox cache only
+echo      3  Old Windows Update files  update cache + component store
+echo      4  Disk cleanup              cleanmgr, protected categories kept
+echo      5  Recycle Bin               empty it, asks you first
+echo      6  Repair system files       DISM RestoreHealth + SFC
+echo      7  Winget app updates        upgrade every package
+echo      8  Analyze disk              measure everything, delete nothing
+echo      9  Deep clean + repair       1 + 3 + 4 + 6
 echo.
 echo    TOOLS
-echo      7  Folder locker             lock / unlock with password
-echo      8  Disk health               chkdsk
-echo      9  RAM check                 Windows memory diagnostic
-echo      A  Deep clean + repair       1 + 2 + 3 + 4
+echo      A  Folder locker             lock / unlock with password
+echo      B  Disk health               chkdsk
+echo      C  RAM check                 Windows memory diagnostic
+echo      D  Network fix               flush DNS / reset Winsock
+echo      E  Restore point             snapshot before big changes
+echo      F  System info               build, hardware, free space
 echo.
 echo    OTHER
-echo      B  Change color
-echo      C  Change username
-echo      D  Recommended apps
-echo      E  Show log
+echo      G  Driver check / update     list, back up, Windows Update
+echo      H  Change color
+echo      I  Change username
+echo      J  Recommended apps
+echo      K  Show log
 echo      R  Run everything, then exit
 echo      S  Restart winclean
 echo      0  Exit
 echo.
-choice /c 123456789ABCDERS0 /n /m "  select > "
+choice /c 123456789ABCDEFGHIJKRS0 /n /m "  select > "
 set "SEL=%errorlevel%"
 
-if "%SEL%"=="16" goto :do_restart
-if "%SEL%"=="17" goto :do_exit
-if "%SEL%"=="15" goto :opt_runall
-if "%SEL%"=="14" goto :opt_log
-if "%SEL%"=="13" goto :opt_apps
-if "%SEL%"=="12" goto :opt_user
-if "%SEL%"=="11" goto :opt_color
-if "%SEL%"=="10" goto :opt_deep
-if "%SEL%"=="9"  goto :opt_ram
-if "%SEL%"=="8"  goto :opt_disk
-if "%SEL%"=="7"  goto :opt_locker
-if "%SEL%"=="6"  goto :opt_driver
-if "%SEL%"=="5"  goto :opt_winget
-if "%SEL%"=="4"  goto :opt_repair
-if "%SEL%"=="3"  goto :opt_cleanmgr
-if "%SEL%"=="2"  goto :opt_wuclean
+if "%SEL%"=="23" goto :do_exit
+if "%SEL%"=="22" goto :do_restart
+if "%SEL%"=="21" goto :opt_runall
+if "%SEL%"=="20" goto :opt_log
+if "%SEL%"=="19" goto :opt_apps
+if "%SEL%"=="18" goto :opt_user
+if "%SEL%"=="17" goto :opt_color
+if "%SEL%"=="16" goto :opt_driver
+if "%SEL%"=="15" goto :opt_sysinfo
+if "%SEL%"=="14" goto :opt_restore
+if "%SEL%"=="13" goto :opt_net
+if "%SEL%"=="12" goto :opt_ram
+if "%SEL%"=="11" goto :opt_disk
+if "%SEL%"=="10" goto :opt_locker
+if "%SEL%"=="9"  goto :opt_deep
+if "%SEL%"=="8"  goto :opt_analyze
+if "%SEL%"=="7"  goto :opt_winget
+if "%SEL%"=="6"  goto :opt_repair
+if "%SEL%"=="5"  goto :opt_recycle
+if "%SEL%"=="4"  goto :opt_cleanmgr
+if "%SEL%"=="3"  goto :opt_wuclean
+if "%SEL%"=="2"  goto :opt_browser
 if "%SEL%"=="1"  goto :opt_temp
 goto :menu
 
 :: ============================== RESTART =============================== ::
+
 :do_restart
 call :log "winclean restarting..."
 start "" "%~f0"
 exit /b
 
 :: ================================ EXIT ================================ ::
+
 :do_exit
 call :log "winclean closed"
 title winclean exiting
@@ -154,6 +174,7 @@ exit /b
 :: =============================== HELPERS ============================== ::
 
 :head
+set "WC_FREE_BEFORE=%WC_FREE_MB%"
 cls
 color %color%
 echo  +==================================================================+
@@ -164,11 +185,13 @@ echo.
 goto :EOF
 
 :echo_user
-set /p "=    user: %user%" <nul
+set /p "=    user: %user%   free: %WC_FREE%" <nul
 echo.
 goto :EOF
 
 :finish
+call :getfree
+call :delta_free
 echo.
 set "rate="
 set /p "rate=  rate winclean 1-10 (enter = skip): "
@@ -205,11 +228,83 @@ goto :EOF
 > "%PROFILE_FILE%" set /p "=%colorprofile%" <nul
 goto :EOF
 
+:: free space of the system drive, in MB + readable form
+:getfree
+set "WC_FREE_MB="
+for /f "delims=" %%B in ('powershell -NoProfile -Command "(Get-PSDrive %SystemDrive:~0,1%).Free/1MB -as [int]" 2^>nul') do set "WC_FREE_MB=%%B"
+if not defined WC_FREE_MB set "WC_FREE_MB=0"
+call :fmt_mb %WC_FREE_MB%
+set "WC_FREE=%WC_TXT%"
+goto :EOF
+
+:delta_free
+set "WC_DELTA="
+if not defined WC_FREE_BEFORE goto :EOF
+if not defined WC_FREE_MB goto :EOF
+set /a "WC_DELTA=WC_FREE_MB-WC_FREE_BEFORE"
+if not defined WC_DELTA goto :EOF
+if %WC_DELTA% LEQ 0 goto :EOF
+call :fmt_mb %WC_DELTA%
+echo   freed: %WC_TXT%   (free space now: %WC_FREE%)
+goto :EOF
+
+:: MB value -> "512 MB" / "35.37 GB"
+:fmt_mb
+if "%~1"=="" (set "WC_TXT=?" & goto :EOF)
+set "WC_TXT=%~1 MB"
+if %~1 LSS 1024 goto :EOF
+set /a "_g=%~1/1024"
+set /a "_m=(%~1-_g*1024)*100/1024"
+if %_m% LSS 10 set "_m=0%_m%"
+set "WC_TXT=%_g%.%_m% GB"
+goto :EOF
+
+:: size + file count of a folder, as a powershell expression in %1
+:size_line
+set "WC_SZ=n/a"
+set "WC_MB="
+set "WC_N="
+for /f "tokens=1,2 delims=|" %%A in ('powershell -NoProfile -Command "Get-ChildItem -Path (%~1) -Force -ErrorAction SilentlyContinue | ForEach-Object { if ($_.PSIsContainer) { Get-ChildItem -LiteralPath $_.FullName -Force -Recurse -ErrorAction SilentlyContinue } else { $_ } } | Measure-Object -Property Length -Sum | ForEach-Object { $s=[int64]([math]::Round($_.Sum/1MB)); '{0}|{1}' -f $s,$_.Count }" 2^>nul') do (set "WC_MB=%%A" & set "WC_N=%%B")
+if not defined WC_MB goto :EOF
+call :fmt_mb %WC_MB%
+set "WC_SZ=%WC_TXT%  (%WC_N% files)"
+goto :EOF
+
+:: one aligned analyse row: size, file count, label
+:row
+call :size_line "%~2"
+set "WC_A=%WC_MB%"
+set "WC_B=%WC_N%"
+if not defined WC_A set "WC_A=?"
+if not defined WC_B set "WC_B=?"
+set "WC_A=        %WC_A%"
+set "WC_B=       %WC_B%"
+echo   %WC_A:~-8% MB  %WC_B:~-7% files  %~1
+goto :EOF
+
 :clean_dir
 if "%~1"=="" goto :EOF
 if not exist "%~1\" goto :EOF
 del /s /f /q "%~1\*" >nul 2>&1
 for /d %%D in ("%~1\*") do if exist "%%D\" rd /s /q "%%D" 2>nul
+goto :EOF
+
+:: browser profile caches, rebuilt by the browser itself
+:clean_cache
+for /d %%C in ("%~1\*Cache") do call :clean_dir "%%~fC"
+goto :EOF
+
+:clean_ff_cache
+call :clean_dir "%~1\cache2"
+call :clean_dir "%~1\startupCache"
+goto :EOF
+
+:: is a browser running right now? sets %busy%
+:browsers_running
+set "busy="
+tasklist /fi "imagename eq chrome.exe" 2>nul | findstr /i /c:"chrome.exe" >nul && set "busy=%busy% chrome"
+tasklist /fi "imagename eq msedge.exe" 2>nul | findstr /i /c:"msedge.exe" >nul && set "busy=%busy% edge"
+tasklist /fi "imagename eq firefox.exe" 2>nul | findstr /i /c:"firefox.exe" >nul && set "busy=%busy% firefox"
 goto :EOF
 
 :: ================================ STEPS =============================== ::
@@ -230,6 +325,8 @@ net stop wuauserv /y >nul 2>&1
 net stop bits /y >nul 2>&1
 echo   - deleting downloaded updates: %SystemRoot%\SoftwareDistribution\Download
 call :clean_dir "%SystemRoot%\SoftwareDistribution\Download"
+echo   - clearing the delivery optimization cache...
+powershell -NoProfile -Command "Delete-DeliveryOptimizationCache -Force" >nul 2>&1
 echo   - cleaning the component store (this can take a few minutes)...
 Dism.exe /online /Cleanup-Image /StartComponentCleanup
 echo   - restarting services...
@@ -243,19 +340,46 @@ if not exist "%SystemRoot%\System32\cleanmgr.exe" (
     echo   - cleanmgr.exe not found on this system, skipped.
     goto :EOF
 )
-echo   - preparing disk cleanup profiles...
-for /f "delims=" %%K in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul ^| findstr /b /c:"HKEY_"') do reg add "%%K" /v StateFlags0001 /t REG_DWORD /d 2 /f >nul 2>&1
+echo   - preparing disk cleanup profiles (safe categories only)...
+set "cm_total=0"
+set "cm_kept=0"
+for /f "delims=" %%K in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul ^| findstr /b /c:"HKEY_"') do call :cm_flag "%%~nxK" "%%K"
+echo   - %cm_total% categories prepared, %cm_kept% protected and left alone.
 echo   - running Disk Cleanup, a window will appear...
 cleanmgr /sagerun:1
 echo   done.
 goto :EOF
 
+:: enable one disk cleanup category - unless it holds user data or a rollback
+:cm_flag
+set /a cm_total+=1
+echo(%~1| findstr /x /i /c:"Recycle Bin" /c:"Previous Installations" /c:"Windows ESD installation files" /c:"User file versions" /c:"Downloads" >nul
+if errorlevel 1 (
+    reg add "%~2" /v StateFlags0001 /t REG_DWORD /d 2 /f >nul 2>&1
+    goto :EOF
+)
+set /a cm_kept+=1
+reg delete "%~2" /v StateFlags0001 /f >nul 2>&1
+echo       kept: %~1
+goto :EOF
+
 :step_repair
 echo   - step 1/2: DISM RestoreHealth (can take 5-10 minutes)
 Dism.exe /online /Cleanup-Image /RestoreHealth
+set "RC=%errorlevel%"
+if not "%RC%"=="0" (
+    echo   [!] DISM failed with error %RC%.
+    echo       SFC needs a healthy component store, so it is skipped now.
+    echo       Retry later, preferably with a working internet connection.
+    exit /b 1
+)
 echo   - step 2/2: System File Checker
 sfc /scannow
-echo   done.
+if errorlevel 1 (
+    echo   [!] SFC found files it could not repair - see the window above.
+    exit /b 1
+)
+echo   done. both checks finished without errors.
 goto :EOF
 
 :step_winget
@@ -278,6 +402,31 @@ call :step_temp
 call :log "temp cleanup finished"
 goto :finish
 
+:opt_browser
+call :head "BROWSER CACHE"
+call :log "browser cache started"
+echo   Only the cache is deleted. Passwords, cookies, history and
+echo   bookmarks stay where they are - the browser rebuilds the cache
+echo   on its next start.
+echo.
+call :browsers_running
+if not defined busy goto :browser_go
+echo   [!] still running:%busy%
+echo       close them first: files in use cannot be deleted anyway.
+echo.
+choice /c YN /m "  clean anyway? (y/n) "
+if errorlevel 2 goto :menu
+:browser_go
+echo   - chrome...
+for /d %%P in ("%LOCALAPPDATA%\Google\Chrome\User Data\*") do call :clean_cache "%%~fP"
+echo   - edge...
+for /d %%P in ("%LOCALAPPDATA%\Microsoft\Edge\User Data\*") do call :clean_cache "%%~fP"
+echo   - firefox...
+for /d %%P in ("%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*") do call :clean_ff_cache "%%~fP"
+echo   done.
+call :log "browser cache finished"
+goto :finish
+
 :opt_wuclean
 call :head "OLD WINDOWS UPDATE FILES"
 call :log "old windows update cleanup started"
@@ -290,6 +439,26 @@ call :head "DISK CLEANUP"
 call :log "disk cleanup started"
 call :step_cleanmgr
 call :log "disk cleanup finished"
+goto :finish
+
+:opt_recycle
+call :head "RECYCLE BIN"
+call :log "recycle bin opened"
+call :size_line "$env:SystemDrive+'\$Recycle.Bin'"
+echo   currently in the recycle bin: %WC_SZ%
+echo.
+echo   Emptying it frees the space for good - there is no undo.
+echo.
+choice /c YN /m "  empty the recycle bin now? (y/n) "
+if errorlevel 2 goto :menu
+echo.
+powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
+if errorlevel 1 (
+    echo   [!] it could not be emptied - the bin may already be empty.
+) else (
+    echo   [ok] the recycle bin is empty now.
+)
+call :log "recycle bin emptied"
 goto :finish
 
 :opt_repair
@@ -306,30 +475,71 @@ call :step_winget
 call :log "winget update finished"
 goto :finish
 
+:opt_analyze
+call :head "ANALYZE DISK"
+call :log "analyze started"
+echo   Nothing is deleted here - this only measures. Numbers are
+echo   approximate, other programs keep writing while it runs.
+echo.
+echo   -------- MB  ------- files  what can be cleaned
+echo   -----------  -------------  ------------------------------
+call :row "user temp" "$env:TEMP"
+call :row "system temp" "$env:WINDIR+'\Temp'"
+call :row "public temp" "$env:PUBLIC+'\temp'"
+call :row "windows update downloads" "$env:WINDIR+'\SoftwareDistribution\Download'"
+call :row "delivery optimization" "$env:WINDIR+'\SoftwareDistribution\DeliveryOptimization'"
+call :row "recycle bin" "$env:SystemDrive+'\$Recycle.Bin'"
+call :row "error report archive" "$env:ProgramData+'\Microsoft\Windows\WER\ReportArchive'"
+call :row "chrome cache" "$env:LOCALAPPDATA+'\Google\Chrome\User Data\*\*Cache'"
+call :row "edge cache" "$env:LOCALAPPDATA+'\Microsoft\Edge\User Data\*\*Cache'"
+call :row "firefox cache" "$env:LOCALAPPDATA+'\Mozilla\Firefox\Profiles\*\cache2'"
+echo.
+echo   free space on %SystemDrive% %WC_FREE%
+call :log "analyze finished"
+goto :finish
+
 :opt_driver
 call :head "DRIVER CHECK / UPDATE"
 call :log "driver check opened"
 set "drvcount=0"
-for /f %%N in ('pnputil /enum-drivers 2^>nul ^| find /c "oem"') do set "drvcount=%%N"
+for /f %%L in ('pnputil /enum-drivers 2^>nul ^| findstr /r /c:"oem[0-9][0-9]*\.inf"') do set /a drvcount+=1
 echo   %drvcount% driver packages are in the driver store.
 echo.
 echo   Drivers are updated through Windows Update or the pc maker's tool.
 echo.
 echo    1  Open Windows Update     (recommended)
 echo    2  List installed drivers  (pnputil)
+echo    3  Back up drivers         copy them to a folder
 echo    0  Back
 echo.
-choice /c 120 /n /m "  select > "
+choice /c 1230 /n /m "  select > "
 set "SUBSEL=%errorlevel%"
-if "%SUBSEL%"=="3" goto :menu
+if "%SUBSEL%"=="4" goto :menu
+if "%SUBSEL%"=="3" goto :driver_export
 if "%SUBSEL%"=="2" goto :driver_list
 echo.
 echo   opening Windows Update...
 start "" ms-settings:windowsupdate
 goto :finish
+
 :driver_list
 echo.
 pnputil /enum-drivers | more
+goto :finish
+
+:driver_export
+set "drvout=%USERPROFILE%\Desktop\winclean-drivers"
+if not exist "%USERPROFILE%\Desktop" set "drvout=%USERPROFILE%\Documents\winclean-drivers"
+if not exist "%drvout%" set "drvout=%TEMP%\winclean-drivers"
+if not exist "%drvout%" mkdir "%drvout%" 2>nul
+echo.
+echo   exporting the drivers to:
+echo     %drvout%
+echo.
+pnputil /export-driver * "%drvout%"
+echo.
+echo   done - keep that folder, it is your rollback if a driver breaks.
+call :log "drivers exported"
 goto :finish
 
 :opt_locker
@@ -391,7 +601,7 @@ if errorlevel 1 (
     goto :menu
 )
 call :log "folder locked"
-echo   [ok] locked. use menu 7 to unlock it with this password.
+echo   [ok] locked. use menu A to unlock it with this password.
 goto :finish
 
 :locker_unlock
@@ -452,6 +662,7 @@ if "%SUBSEL%"=="1" goto :disk_check
 echo.
 chkdsk %drive% /F
 goto :finish
+
 :disk_check
 echo.
 chkdsk %drive%
@@ -464,8 +675,120 @@ if not exist "%SystemRoot%\System32\mdsched.exe" (
     echo   [!] mdsched.exe not found on this system.
     goto :menu
 )
+echo   Windows restarts and tests the memory. Save your work first.
+echo.
 start "" "%SystemRoot%\System32\mdsched.exe"
 echo   [ok] choose "Restart now" or "Schedule a restart" in the window.
+goto :finish
+
+:opt_net
+call :head "NETWORK FIX"
+call :log "network menu opened"
+echo   Troubleshooting, not cleanup. Use these when a page does not
+echo   load, or a program lost its network connection.
+echo.
+echo    1  Flush DNS cache      ipconfig /flushdns, no restart needed
+echo    2  Reset Winsock        netsh winsock reset, needs a restart
+echo    3  Both
+echo    0  Back
+echo.
+choice /c 1230 /n /m "  select > "
+set "SUBSEL=%errorlevel%"
+if "%SUBSEL%"=="4" goto :menu
+if "%SUBSEL%"=="3" goto :net_both
+if "%SUBSEL%"=="2" goto :net_winsock
+goto :net_dns
+
+:net_dns
+echo.
+echo   - flushing the DNS resolver cache...
+ipconfig /flushdns
+call :log "dns cache flushed"
+goto :finish
+
+:net_winsock
+echo.
+echo   [!] this resets the Winsock catalog. Software that installs a
+echo       network filter (VPN, antivirus, proxy tools) may have to be
+echo       reinstalled, and a restart finishes the reset.
+echo.
+choice /c YN /m "  continue? (y/n) "
+if errorlevel 2 goto :menu
+echo.
+netsh winsock reset
+call :log "winsock reset"
+goto :finish
+
+:net_both
+call :net_dns_winsock
+goto :finish
+
+:net_dns_winsock
+echo.
+echo   - flushing the DNS resolver cache...
+ipconfig /flushdns
+echo   [!] this also resets the Winsock catalog - a restart finishes it.
+echo.
+choice /c YN /m "  continue? (y/n) "
+if errorlevel 2 goto :menu
+echo.
+netsh winsock reset
+call :log "dns flushed and winsock reset"
+goto :EOF
+
+:opt_restore
+call :head "RESTORE POINT"
+call :log "restore point requested"
+echo   A restore point snapshots system files and settings, so you can
+echo   roll a change back. It is not a backup of your documents.
+echo.
+echo   creating it, this can take a minute...
+powershell -NoProfile -Command "try { Checkpoint-Computer -Description 'winclean %ver%' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop; exit 0 } catch { exit 1 }"
+if errorlevel 1 (
+    echo   [!] it did not work. The usual reasons are:
+    echo       - system protection is switched off for this drive
+    echo       - a restore point was already made in the last 24 hours
+) else (
+    echo   [ok] restore point created.
+)
+goto :finish
+
+:opt_sysinfo
+call :head "SYSTEM INFO"
+call :log "system info opened"
+set "cvkey=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+set "cvname=unknown"
+set "cvver="
+set "cvbuild="
+set "cvubr=0"
+set "cvedition="
+set "cpuname=unknown"
+set "ramgb=?"
+set "dsktot=0"
+for /f "tokens=2,*" %%A in ('reg query "%cvkey%" /v ProductName 2^>nul ^| findstr /i "REG_SZ"') do set "cvname=%%B"
+for /f "tokens=2,*" %%A in ('reg query "%cvkey%" /v DisplayVersion 2^>nul ^| findstr /i "REG_SZ"') do set "cvver=%%B"
+for /f "tokens=2,*" %%A in ('reg query "%cvkey%" /v CurrentBuildNumber 2^>nul ^| findstr /i "REG_SZ"') do set "cvbuild=%%B"
+for /f "tokens=2,*" %%A in ('reg query "%cvkey%" /v UBR 2^>nul ^| findstr /i "REG_DWORD"') do set "cvubr=%%B"
+set /a "cvubrn=%cvubr%"
+for /f "tokens=2,*" %%A in ('reg query "%cvkey%" /v EditionID 2^>nul ^| findstr /i "REG_SZ"') do set "cvedition=%%B"
+for /f "delims=" %%B in ('powershell -NoProfile -Command "(Get-CimInstance Win32_Processor).Name" 2^>nul') do set "cpuname=%%B"
+for /f "delims=" %%B in ('powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1GB -as [int]" 2^>nul') do set "ramgb=%%B"
+for /f "delims=" %%B in ('powershell -NoProfile -Command "((Get-PSDrive %SystemDrive:~0,1%).Used+(Get-PSDrive %SystemDrive:~0,1%).Free)/1MB -as [int]" 2^>nul') do set "dsktot=%%B"
+if not defined dsktot set "dsktot=0"
+if not defined cvver set "cvver=unknown"
+if not defined cvbuild set "cvbuild=?"
+if not defined cvedition set "cvedition=unknown"
+call :fmt_mb %dsktot%
+set "dsktot_txt=%WC_TXT%"
+echo   windows      %cvname%
+echo   version      %cvver%   (build %cvbuild%.%cvubrn%)
+echo   edition      %cvedition%
+echo   cpu          %cpuname%
+echo   ram          %ramgb% GB
+echo   disk %SystemDrive%       %WC_FREE% free of %dsktot_txt%
+echo.
+echo   winclean     %WC_DIR%
+echo   log file     %MAIN_LOG%
 goto :finish
 
 :opt_deep
@@ -561,6 +884,7 @@ echo.
 echo   installing Java...
 winget install --id=Oracle.JavaRuntimeEnvironment -e --accept-package-agreements --accept-source-agreements
 goto :finish
+
 :app_localsend
 echo.
 echo   installing LocalSend...
