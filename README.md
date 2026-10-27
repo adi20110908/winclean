@@ -1,188 +1,107 @@
 # Winclean
 
-A single-file Windows maintenance tool. One batch file, no installation, no
-dependencies — double click it, approve the UAC prompt, and pick an option
-from the menu. It cleans temporary files, throws out old Windows Update
-downloads, repairs the system image, updates your apps, checks drivers,
-health-checks your disks and RAM, and can lock a folder behind a password.
+Winclean is a portable Windows maintenance app with a searchable installed-app manager and a set of built-in Windows cleanup and system tools. It is distributed as a single `.exe`; there is no installer.
 
-Latest version: **v4.5.0**
+Latest version: **v5.3.1**
 
-If the latest version is not working, use an older one:
-https://github.com/adi20110908/winclean/tree/older-versions
+[Download Winclean.exe](https://github.com/adi20110908/winclean/releases/latest) · [Browse the source](https://github.com/adi20110908/winclean)
 
----
+## Interface
 
-## Requirements
+Winclean opens on **Maintenance**. **Tools** is the other top-level tab; the app manager is not a separate main page. Its three sections are always available in one consistent tab bar:
 
-| | |
-|---|---|
-| OS | Windows 10 / Windows 11 |
-| Rights | Administrator — it asks for them at startup (UAC prompt) |
-| Tools | Everything it uses ships with Windows: `Dism`, `sfc`, `cleanmgr`, `chkdsk`, `pnputil`, `icacls`, `mdsched`, `choice` |
-| Optional | `winget` (App Installer) for options `5` and `D` — if it is missing, those options say so and skip instead of failing |
+- **System tools** — Windows troubleshooting, repair and information tools.
+- **App manager** — searchable installed applications, uninstall and optional reviewed leftovers cleanup.
+- **Preferences** — accent-color chooser, display name, local rating and restart action.
 
-## Quick start
+The interface, app list and custom dialogs use a dark theme. The accent chooser shows color swatches for the 15 named colors from the original batch version. Display name and accent are saved for the current Windows user under `%LOCALAPPDATA%\Winclean`.
 
-1. Download `winclean.bat`.
-2. Double click it.
-3. Press **Yes** on the UAC prompt (it relaunches itself with admin rights
-   automatically — no need to "run as administrator" by hand).
-4. Press the key of the option you want. **No Enter needed**, one keypress
-   starts the action.
+## App manager
 
-```
-  +==================================================================+
-    WINCLEAN v4.5.0   -   MAIN MENU
-    user: Adi   free: 28.90 GB
-  +==================================================================+
+The **Tools → App manager** section lists registered desktop apps and removable Store apps for the current Windows account. Search by name, publisher or app type. Select an app to see its publisher, version, source and install location, then choose **Uninstall selected** or double-click its row.
 
-    CLEANING
-      1  Temp files                user + system + public temp
-      2  Browser cache             Chrome / Edge / Firefox cache only
-      3  Old Windows Update files  update cache + component store
-      4  Disk cleanup              cleanmgr, protected categories kept
-      5  Recycle Bin               empty it, asks you first
-      6  Repair system files       DISM RestoreHealth + SFC
-      7  Winget app updates        upgrade every package
-      8  Analyze disk              measure everything, delete nothing
-      9  Deep clean + repair       1 + 3 + 4 + 6
+- Every uninstall is confirmed first. Desktop apps launch their registered interactive `.exe` uninstaller; Windows Installer products use `msiexec /x`. Winclean strips common silent switches rather than intentionally requesting a silent uninstall.
+- Store apps are removed only from the current account. Framework packages and protected Windows components are not offered for removal.
+- Script/command interpreters, missing uninstallers and unsupported commands are blocked. Use **Windows Settings → Apps → Installed apps** for those entries.
+- After uninstall, Winclean refreshes the inventory. A separate optional deep-clean scan is offered only if the app no longer appears.
 
-    TOOLS
-      A  Folder locker             lock / unlock with password
-      B  Disk health               chkdsk
-      C  RAM check                 Windows memory diagnostic
-      D  Network fix               flush DNS / reset Winsock
-      E  Restore point             snapshot before big changes
-      F  System info               build, hardware, free space
+### Deep-clean review
 
-    OTHER
-      G  Driver check / update     list, back up, Windows Update
-      H  Change color
-      I  Change username
-      J  Recommended apps
-      K  Show log
-      R  Run everything, then exit
-      S  Restart winclean
-      0  Exit
+The scan looks for likely app-specific leftovers: a Store package-data directory, an exact app-name directory under known AppData roots, a conservatively matched install folder, the app's uninstall registration and an exact-name registry settings key. **Nothing is selected automatically.** Review each full path; app data may contain personal files and registry names may match unrelated software. Cancel the review to leave everything untouched.
 
-  select >
-```
+- Selected folders are moved to the Windows Recycle Bin. Folders containing junctions or symbolic links are excluded.
+- Registry keys are exported before removal to `%LOCALAPPDATA%\Winclean\Backups`. If export fails, the key is not removed. Local-machine changes may prompt for administrator approval.
+- Matching is conservative and cannot identify every vendor-specific leftover or guarantee complete removal.
 
-Every screen has the same framed header (version, screen name, your
-username and the free space on the system drive) and every operation ends
-with an optional rating prompt — press
-**Enter** to skip it, nothing is sent anywhere, the rating is only written
-to the local log. After the prompt you are back at the main menu; winclean
-closes only when you press `0` (or after `R`, which is meant to quit).
+## Maintenance
 
----
+The **Maintenance** page contains these actions:
 
-## What each option does
+- **Temporary files** — clean current-user, Windows and Public temp locations. Files in use are skipped; linked folders are not traversed. Windows/Public locations may request administrator approval. Disk analysis reports all three temp locations and the Recycle Bin as read-only sizes.
+- **Browser cache** — clears cache folders for Chrome, Edge and Firefox. Cookies, passwords, history and bookmarks are untouched. Close browsers first to avoid active cache files.
+- **Windows Update downloads** — requests UAC approval, stops update services that were running, clears downloaded updates and the Delivery Optimization cache, runs DISM component cleanup, then attempts to restart those services.
+- **Disk Cleanup** — prepares the Windows Disk Cleanup profile while excluding the Recycle Bin, previous Windows installations, ESD setup files, user file versions and Downloads; then runs `cleanmgr`.
+- **Recycle Bin** — prompts before permanently emptying it. This cannot be undone.
+- **Disk analysis** — reports sizes for user/system/public temp, Recycle Bin, Windows Update downloads, Delivery Optimization, Windows Error Reporting and common browser caches without deleting anything.
+- **Component cleanup** — runs DISM `/StartComponentCleanup`; this is not system repair.
+- **System file repair** (under **Tools → System tools**) — runs DISM `/RestoreHealth`, then SFC `/scannow` if DISM succeeds.
+- **Winget app updates** — runs `winget upgrade --all` with package/source agreement flags.
+- **Recommended apps** — offers LocalSend or Oracle Java Runtime Environment through `winget`.
+- **Deep clean + repair** — confirmation-gated sequence of temp cleanup, Windows Update cleanup, Disk Cleanup and system repair.
+- **Run everything, then exit** — the same sequence plus winget app updates, then closes Winclean after success (as in the batch menu). A failed step stops the sequence and leaves Winclean open.
 
-### Cleaning
+Long operations ask for confirmation and stop at the first failed step. Windows utilities may open their own windows or display UAC prompts.
 
-| Key | Option | What actually happens |
-|---|---|---|
-| `1` | Temp files | Deletes the contents of `%TEMP%`, `%SystemRoot%\Temp` and `%PUBLIC%\temp` (files with `del /f /q`, leftover directories with `rd /s /q`). Files that are in use are skipped, they are not an error. |
-| `2` | Browser cache | Empties every browser profile's cache folders: Chrome and Edge `Cache`, `Code Cache`, `GPUCache`, Firefox `cache2` and `startupCache`. **Cache only** — passwords, cookies, history, bookmarks and site data stay where they are; the browser rebuilds the cache on its next start. If Chrome, Edge or Firefox is still running, winclean says so and asks before continuing, because files in use cannot be deleted anyway. |
-| `3` | Old Windows Update files | Stops `wuauserv` and `bits`, empties `SoftwareDistribution\Download` (the folder where every downloaded update copy lives), clears the Delivery Optimization cache (`Delete-DeliveryOptimizationCache`), runs `Dism /Online /Cleanup-Image /StartComponentCleanup` to compact the component store, then restarts both services. |
-| `4` | Disk cleanup | Writes `StateFlags0001 = 2` into every **safe** `VolumeCaches` profile in the registry, then runs `cleanmgr /sagerun:1`. This is the step most "disk cleanup" scripts forget — without the flags, `cleanmgr` silently does nothing. It no longer flags *everything*: `Recycle Bin`, `Previous Installations`, `Windows ESD installation files`, `User file versions` and `Downloads` are skipped, any flag an older version already wrote to them is removed, and each one is printed as `kept:` so you can see what was protected. |
-| `5` | Recycle Bin | Shows how much is in the bin right now, asks `y/n`, then runs `Clear-RecycleBin -Force`. No undo — this is the one option that destroys files you might still want. |
-| `6` | Repair system files | `Dism /Online /Cleanup-Image /RestoreHealth` (re-fetches broken system files from Windows Update) followed by `sfc /scannow`. If DISM fails, SFC is **skipped** — it needs a healthy component store — and DISM's error code is printed instead of pretending success. Expect 5–15 minutes. |
-| `7` | Winget app updates | `winget upgrade --all --accept-package-agreements --accept-source-agreements`, so it never stops and waits for you to accept a licence. |
-| `8` | Analyze disk | Measures and prints a table of MB and file counts for user temp, system temp, public temp, Windows Update downloads, the Delivery Optimization cache, the recycle bin, the Windows Error Reporting archive and the caches of Chrome, Edge and Firefox, plus the free space on the system drive. **Deletes nothing** — it is the preview of what the other options would free. |
-| `9` | Deep clean + repair | Runs `1 + 3 + 4 + 6` back to back with a progress counter, then returns to the menu. |
+## Tools → System tools
 
-### Tools
+- **Disk health** — choose a drive and run a read-only CHKDSK report, or explicitly opt in to `/F` repair (may require a restart).
+- **Folder locker** — applies a reversible Windows ACL deny rule to a selected personal folder. A salted PBKDF2 password verifier and the original access-control descriptor are stored locally so Winclean can restore the permissions after the password check. This is not encryption; an administrator can still access the data. Keep a separate backup and keep Winclean's lock metadata intact until the folder is unlocked.
+- **Memory diagnostic** — opens Windows Memory Diagnostic; testing requires a restart.
+- **Restore point** — asks Windows to create a restore point, subject to System Protection settings and Windows limits.
+- **System information** — shows Windows, CPU, memory and disk details.
+- **Network repair** — choose Flush DNS, Reset Winsock or Do both. Winsock reset requires a separate warning, can affect VPN/security network filters and usually requires a restart.
+- **Drivers** — open Windows Update, list driver packages or export a driver backup to `Desktop\winclean-drivers`.
+- **Activity log** — view locally recorded actions and open the log directory.
 
-| Key | Option | What actually happens |
-|---|---|---|
-| `A` | Folder locker | Lock: hides the folder and applies an inherited `icacls /deny` for the `Everyone` SID, so nothing can be opened inside it. Unlock: asks for the password, removes the deny ACE and unhides. Refuses drive roots, `%SystemRoot%`, `System32`, `SysWOW64`, `%APPDATA%`, your user profile and winclean's own folder. |
-| `B` | Disk health | Asks for a drive letter, then either checks it read-only (`chkdsk C:`) or checks and fixes (`chkdsk C: /F`). On `C:` Windows will offer to run the fix on the next boot. |
-| `C` | RAM check | Starts the Windows Memory Diagnostic (`mdsched.exe`). Choose *Restart now* or *Schedule a restart* in the window it opens; the test runs at the next boot. |
-| `D` | Network fix | Troubleshooting, not cleanup: flush the DNS resolver cache (`ipconfig /flushdns`, no restart needed) or reset the Winsock catalog (`netsh winsock reset`, needs a restart). The Winsock reset warns first that VPN and antivirus software with a network filter may have to be reinstalled. Both, in that order, is the third choice. |
-| `E` | Restore point | `Checkpoint-Computer -Description 'winclean vX.Y.Z' -RestorePointType MODIFY_SETTINGS`. If it fails, winclean says why instead of staying silent: system protection switched off for the drive, or one was already created in the last 24 hours (Windows allows only one a day). |
-| `F` | System info | Reads the registry for Windows product name, `DisplayVersion`, build number and UBR (shown as decimal, not `0x...`), edition; then CPU, RAM, free and total disk space, and where winclean keeps its folder and log. Read-only. |
+Winclean uses Windows' built-in utilities. Administrator approval is requested only for operations that need it. Read each confirmation and UAC prompt before continuing.
 
-### Other
+## Preferences, data and privacy
 
-| Key | Option | What actually happens |
-|---|---|---|
-| `G` | Driver check / update | Counts the driver packages in the driver store (`pnputil /enum-drivers` piped through `findstr`, so it works on a localized Windows too), then offers: open **Windows Update** (where driver updates actually come from), list every installed driver, or **back up the drivers** — `pnputil /export-driver *` into `Desktop\winclean-drivers` (falling back to Documents, then `%TEMP%`), which is your rollback if a driver update breaks something. |
-| `H` | Change color | 15 presets (black background, one foreground color each). Saved, so it is used again on the next start. |
-| `I` | Change username | Renames the greeting in the header. Saved. |
-| `J` | Recommended apps | `winget install` for Java and LocalSend. Not sponsored, just a short useful list — edit the list in `:opt_apps` if you want other apps. |
-| `K` | Show log | Pages through the all-time log. |
-| `R` | Run everything, then exit | The five cleaning steps in order (temp, Windows Update files, disk cleanup, repair, winget), then quits. This is the "set it and forget it" mode. |
-| `S` | Restart winclean | Starts a fresh instance and closes this one. |
-| `0` | Exit | Quits. |
+- **Accent color** — 15 batch-compatible color choices; saved locally.
+- **Display name** — changes the welcome label; saved locally.
+- **Rate Winclean** — records the score in the local activity log only. It is never transmitted.
+- **Restart Winclean** — closes and starts the app again when no operation is active.
 
----
+Winclean does not send telemetry or create an account. It reads installed-app information from Windows uninstall registry entries and the current account's Store package list. Preferences, activity logs, folder-lock metadata and ACL backups are kept under `%LOCALAPPDATA%\Winclean`. Deleting the folder-lock metadata while a folder is locked can prevent restoration of its original permissions.
 
-## Where your data lives
+## Download and use
 
-Nothing is written next to the script — everything goes to your profile:
+1. Download `Winclean.exe` from the [latest GitHub Release](https://github.com/adi20110908/winclean/releases/latest).
+2. Run it — no installer, service or files beside the executable are required.
+3. Start with **Maintenance** or open **Tools → App manager** to manage installed apps. Inside Tools, **System tools**, **App manager** and **Preferences** are always available in the same tab bar.
 
-```
-%APPDATA%\winclean\
-├── colormode.cfg      chosen color code
-├── colorprofile.cfg   chosen color name
-├── user.cfg           chosen username
-├── locker.pw          folder locker password
-└── logs\
-    ├── winclean.log            all-time log (every run appends)
-    └── winclean-latest.log     this session only, rewritten at start
+## Build from source
+
+Winclean is written in C# with Windows Forms and built using the Windows .NET Framework C# compiler. No external packages are needed.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-Delete that folder to reset winclean to defaults; it recreates it on the
-next start.
+The script creates `dist\Winclean.exe`. GUI source: [`src/Winclean.cs`](src/Winclean.cs). The original command-line implementation remains available in [`winclean.bat`](winclean.bat).
 
-## The folder locker, honestly
+## Open source
 
-It is an access-permission lock, **not encryption**:
-
-* The password only gates winclean's unlock screen, and it is stored in
-  plain text in `locker.pw`.
-* The folder is hidden and denied through its ACL, so a normal double click
-  fails — but an administrator can always undo it by hand, for example:
-
-  ```
-  icacls "C:\path\to\folder" /remove:d *S-1-1-0
-  ```
-
-* The deny is applied with the `Everyone` **SID** (`*S-1-1-0`) instead of the
-  group name, so it also works on a Hungarian or any other localized
-  Windows, where the group is not called "Everyone".
-* Keep at least one unlocked copy of anything important. If you lock a
-  folder and forget the password, the command above is your way out.
-
-## Notes and limits
-
-* Options `3` and `6` are slow on purpose — DISM and SFC do real work.
-  Leave the window open.
-* Option `4` opens the real Disk Cleanup window and waits for it to finish.
-* Option `1` cannot delete files currently in use by a running program.
-* Option `8` deletes nothing — run it first to see what is really there.
-* Option `2` never touches passwords, cookies or history, but close the
-  browsers anyway; winclean warns and asks if they are still running.
-* Option `5` is the only one that destroys data you might want back, and
-  it always asks before doing it.
-* Option `4` deliberately leaves the recycle bin, the previous Windows
-  installation, the Windows ESD files and user file versions alone — use
-  Windows' own Disk Cleanup window if you want those removed too.
-* Option `E` can only make one restore point every 24 hours.
-* The header shows free space on the system drive, and any screen that
-  actually freed something ends with a `freed: ... (free space now: ...)`
-  line, so you can see what an option really accomplished.
-* `R` runs everything including the slow steps, so expect 15–30 minutes.
+Winclean is released under the [MIT License](LICENSE). Contributions and issue reports are welcome.
 
 ## Version history
 
-| Version | |
+| Version | Changes |
 |---|---|
-| **v4.5.0** | New options: browser cache cleanup (Chrome / Edge / Firefox, cache only), recycle bin with a confirmation, **Analyze disk** (MB and file counts for every target, deletes nothing), network fix (DNS flush / Winsock reset), restore point, system info, and driver backup. Disk cleanup now protects user data — recycle bin, previous installation, Windows ESD files, user file versions and downloads are kept instead of flagged — and the header plus every cleanup screen show free space and how much was freed. A failed DISM now skips SFC and prints the error code instead of carrying on. |
-| v4.4.1 | Fixed the app quitting right after the rating prompt: every option now hands control back to the main menu explicitly, instead of depending on call/return bookkeeping. |
-| v4.4.0 | Rewritten around shared subroutines (964 → 580 lines). Menu moved to single-key `choice` input with grouped sections; boot no longer runs from `System32`; `cleanmgr` profiles are configured before `sagerun`; repair uses `DISM /RestoreHealth`; `mdsched` is called from `System32`; user input can no longer break the command line. Added the old Windows Update cleanup, a working folder locker and a real driver check. |
-| v4.3.1.1.1.1b | Previous release. |
-| older | See the [`older-versions`](https://github.com/adi20110908/winclean/tree/older-versions) branch. |
+| **v5.3.1** | Fixed a startup crash in dark-theme application and verified the Maintenance/Tools navigation, app manager, and all 15 accent swatches on Windows. |
+| v5.2.0 | Reorganized the dark-themed interface with Maintenance and Tools; restored preferences and batch-era tools. |
+| v5.1.0 | Added the portable Windows GUI as the primary app: searchable installed-app list, confirmed interactive uninstall, opt-in reviewed leftovers cleanup with registry exports and Recycle Bin recovery, and Cleanup/Tools tabs. |
+| v4.5.0 | Added disk analysis, browser cache cleanup, Recycle Bin handling, network/restore/system information tools and driver backup to the batch utility. |
+| v4.4.1 | Fixed returning to the main menu after the rating prompt. |
+| v4.4.0 | Reworked the batch utility into shared subroutines and a grouped single-key menu. |
+| Older versions | See the [`older-versions` branch](https://github.com/adi20110908/winclean/tree/older-versions). |
