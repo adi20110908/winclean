@@ -75,6 +75,19 @@ pasting the history row.
   once in this repo — verify, do not assume.
 * Never commit credentials, `.env` files or tokens.
 
+## This checkout (Freebuff worktree on Windows)
+
+* The working branch is `freebuff/<chat-id>`, not `main`. Its upstream is
+  `origin/main` and `push.default=upstream`, so a plain `git push` publishes
+  to `main` — no `HEAD:main` dance needed.
+* `push.followTags=true` is set, so **every push also publishes any new
+  annotated tag**. Step 3 of the release workflow is therefore covered even
+  if you only remember to run `git push`.
+* `origin` is `https://github.com/adi20110908/winclean.git`. Authentication
+  comes from the Windows Git Credential Manager; no token belongs in the
+  repository, in a config file or in an environment variable.
+* Tags already published: `v4.3.1.1.1.1b`, `v4.4.0`, `v4.4.1`.
+
 ## File format rules
 
 * `winclean.bat`: **UTF-8 without BOM, CRLF line endings, no double CR**.
